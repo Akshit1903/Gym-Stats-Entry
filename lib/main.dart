@@ -13,10 +13,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData.dark(),
-      home: const AppWrapper(),
-    );
+    return MaterialApp(theme: ThemeData.dark(), home: const AppWrapper());
   }
 }
 
@@ -59,6 +56,13 @@ class _AppWrapperState extends State<AppWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    _authService.silentSignIn().then((_) {
+      if (mounted) {
+        setState(() {
+          _currentUser = _authService.currentUser;
+        });
+      }
+    });
     if (_currentUser != null) {
       return WorkoutFormPage(
         user: _currentUser!,
@@ -69,10 +73,7 @@ class _AppWrapperState extends State<AppWrapper> {
         },
       );
     } else {
-      return SignInView(
-        authService: _authService,
-        onSignedIn: _onSignedIn,
-      );
+      return SignInView(authService: _authService, onSignedIn: _onSignedIn);
     }
   }
 }
