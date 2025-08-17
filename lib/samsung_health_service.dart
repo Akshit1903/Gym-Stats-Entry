@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 /// Samsung Health Data Model
 class SamsungHealthData {
   final double? bodyweight;
@@ -64,8 +62,10 @@ class SamsungHealthService {
       //   appId: 'your_app_id',
       //   appSecret: 'your_app_secret',
       // );
-      
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate initialization
+
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      ); // Simulate initialization
       return true;
     } catch (e) {
       print('$_tag: Failed to initialize Samsung Health SDK: $e');
@@ -79,7 +79,7 @@ class SamsungHealthService {
       // TODO: Replace with actual Samsung Health availability check
       // Example:
       // return await SamsungHealth.isAvailable();
-      
+
       await Future.delayed(const Duration(milliseconds: 200)); // Simulate check
       return true; // Assume available for demo purposes
     } catch (e) {
@@ -98,8 +98,10 @@ class SamsungHealthService {
       //   'body_composition',
       //   'activity_calories',
       // ]);
-      
-      await Future.delayed(const Duration(milliseconds: 1000)); // Simulate permission request
+
+      await Future.delayed(
+        const Duration(milliseconds: 1000),
+      ); // Simulate permission request
       return true; // Assume granted for demo purposes
     } catch (e) {
       print('$_tag: Failed to request Samsung Health permissions: $e');
@@ -114,17 +116,17 @@ class SamsungHealthService {
       // Example:
       // final startTime = date.millisecondsSinceEpoch;
       // final endTime = date.add(const Duration(days: 1)).millisecondsSinceEpoch;
-      // 
+      //
       // final bodyWeightData = await SamsungHealth.readBodyWeight(
       //   startTime: startTime,
       //   endTime: endTime,
       // );
-      // 
+      //
       // final bodyCompositionData = await SamsungHealth.readBodyComposition(
       //   startTime: startTime,
       //   endTime: endTime,
       // );
-      // 
+      //
       // final caloriesData = await SamsungHealth.readActivityCalories(
       //   startTime: startTime,
       //   endTime: endTime,
@@ -172,9 +174,9 @@ class SamsungHealthService {
       //   endTime: date.add(const Duration(days: 1)).millisecondsSinceEpoch,
       // );
       // return data.isNotEmpty;
-      
+
       await Future.delayed(const Duration(milliseconds: 300)); // Simulate check
-      
+
       // For demo purposes, assume data exists for recent dates
       final daysSinceNow = DateTime.now().difference(date).inDays;
       return daysSinceNow <= 7; // Assume data exists for the last 7 days
@@ -190,8 +192,10 @@ class SamsungHealthService {
       // TODO: Replace with actual Samsung Health disconnection
       // Example:
       // await SamsungHealth.disconnect();
-      
-      await Future.delayed(const Duration(milliseconds: 200)); // Simulate disconnection
+
+      await Future.delayed(
+        const Duration(milliseconds: 200),
+      ); // Simulate disconnection
     } catch (e) {
       print('$_tag: Failed to disconnect from Samsung Health: $e');
     }
@@ -199,9 +203,19 @@ class SamsungHealthService {
 
   String _formatDate(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
-} 
+}
