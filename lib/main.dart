@@ -5,6 +5,7 @@ import 'package:gym_stats_entry_client/sign_in_view.dart';
 import 'package:gym_stats_entry_client/workout_form_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MainApp());
 }
 
@@ -32,7 +33,13 @@ class _AppWrapperState extends State<AppWrapper> {
   void initState() {
     super.initState();
     _authService.addListener(_onAuthStateChanged);
-    // Check if user is already signed in
+    _authService.silentSignIn().then((_) {
+      if (mounted) {
+        setState(() {
+          _currentUser = _authService.currentUser;
+        });
+      }
+    });
     _currentUser = _authService.currentUser;
   }
 
@@ -56,13 +63,6 @@ class _AppWrapperState extends State<AppWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    _authService.silentSignIn().then((_) {
-      if (mounted) {
-        setState(() {
-          _currentUser = _authService.currentUser;
-        });
-      }
-    });
     if (_currentUser != null) {
       return WorkoutFormPage(
         user: _currentUser!,

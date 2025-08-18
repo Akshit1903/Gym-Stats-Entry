@@ -6,6 +6,7 @@ import 'dart:convert';
 import './auth.dart';
 import './settings_page.dart';
 import './samsung_health_service.dart';
+import './graphs_page.dart';
 
 // Workout type enum
 enum WorkoutType {
@@ -34,7 +35,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _dateController = TextEditingController();
   bool _isSubmitting = false;
-  WorkoutType _selectedWorkout = WorkoutType.upper;
+  WorkoutType? _selectedWorkout;
 
   // Form field controllers
   final _bodyweightController = TextEditingController();
@@ -44,6 +45,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   final _fatPercentageController = TextEditingController();
   final _bmrController = TextEditingController();
   final _energyController = TextEditingController();
+  final _avgHeartRateController = TextEditingController();
+  final _maxHeartRateController = TextEditingController();
   final _notesController = TextEditingController();
 
   @override
@@ -63,6 +66,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _fatPercentageController.dispose();
     _bmrController.dispose();
     _energyController.dispose();
+    _avgHeartRateController.dispose();
+    _maxHeartRateController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -258,38 +263,45 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
     setState(() {
       _isSubmitting = true;
     });
-
-    Future<String?> getAccessToken(
-      GoogleSignInAccount? googleSignInAccount,
-    ) async {
-      if (googleSignInAccount == null) {
-        return null;
-      }
-      final googleSignInAuthentication =
-          await googleSignInAccount.authentication;
-      return googleSignInAuthentication.accessToken;
-    }
 
     try {
       // Prepare the data for the POST request
       final workoutData = {
         'Date': _dateController.text,
-        'Bodyweight': double.tryParse(_bodyweightController.text) ?? 0.0,
-        'SkeletalMass': double.tryParse(_skeletalMassController.text) ?? 0.0,
-        'FatMass': double.tryParse(_fatMassController.text) ?? 0.0,
-        'BodyWater': double.tryParse(_bodyWaterController.text) ?? 0.0,
-        'FatPercent': double.tryParse(_fatPercentageController.text) ?? 0.0,
-        'BMR': double.tryParse(_bmrController.text) ?? 0.0,
-        'Workout': _selectedWorkout.displayName,
-        'Energy': int.tryParse(_energyController.text) ?? 0,
-        'Notes': _notesController.text,
+        'Bodyweight': _bodyweightController.text.isNotEmpty
+            ? double.tryParse(_bodyweightController.text)
+            : null,
+        'SkeletalMass': _skeletalMassController.text.isNotEmpty
+            ? double.tryParse(_skeletalMassController.text)
+            : null,
+        'FatMass': _fatMassController.text.isNotEmpty
+            ? double.tryParse(_fatMassController.text)
+            : null,
+        'BodyWater': _bodyWaterController.text.isNotEmpty
+            ? double.tryParse(_bodyWaterController.text)
+            : null,
+        'FatPercent': _fatPercentageController.text.isNotEmpty
+            ? double.tryParse(_fatPercentageController.text)
+            : null,
+        'BMR': _bmrController.text.isNotEmpty
+            ? double.tryParse(_bmrController.text)
+            : null,
+        'Workout': _selectedWorkout?.displayName,
+        'Energy': _energyController.text.isNotEmpty
+            ? int.tryParse(_energyController.text)
+            : null,
+        'AvgHeartRate': _avgHeartRateController.text.isNotEmpty
+            ? int.tryParse(_avgHeartRateController.text)
+            : null,
+        'MaxHeartRate': _maxHeartRateController.text.isNotEmpty
+            ? int.tryParse(_maxHeartRateController.text)
+            : null,
+        'Notes': _notesController.text.isNotEmpty
+            ? _notesController.text
+            : null,
       };
 
       // Get API URL from settings
@@ -318,10 +330,17 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
               backgroundColor: Colors.green,
             ),
           );
-          // Clear form after successful submission
-          _formKey.currentState!.reset();
-          _dateController.text = _formatDate(DateTime.now());
-          _selectedWorkout = WorkoutType.upper;
+
+          // Reset form to original values (null)
+          _resetForm();
+
+          // Navigate to graphs page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GraphsPage(user: widget.user),
+            ),
+          );
         }
       } else {
         if (mounted) {
@@ -353,6 +372,32 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     }
   }
 
+  Future<String?> getAccessToken(
+    GoogleSignInAccount? googleSignInAccount,
+  ) async {
+    if (googleSignInAccount == null) {
+      return null;
+    }
+    final googleSignInAuthentication = await googleSignInAccount.authentication;
+    return googleSignInAuthentication.accessToken;
+  }
+
+  void _resetForm() {
+    _formKey.currentState!.reset();
+    _dateController.text = _formatDate(DateTime.now());
+    _selectedWorkout = null;
+    _bodyweightController.clear();
+    _skeletalMassController.clear();
+    _fatMassController.clear();
+    _bodyWaterController.clear();
+    _fatPercentageController.clear();
+    _bmrController.clear();
+    _energyController.clear();
+    _avgHeartRateController.clear();
+    _maxHeartRateController.clear();
+    _notesController.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -360,11 +405,22 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
-        title: const Text('Add Workout Entry'),
+        title: const FittedBox(child: Text('Add Workout Entry')),
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: () => {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GraphsPage(user: widget.user),
+                ),
+              ),
+            },
+            icon: Icon(Icons.auto_graph, color: scheme.onSurfaceVariant),
+          ),
           IconButton(
             icon: Icon(Icons.settings, color: scheme.onSurfaceVariant),
             onPressed: _openSettings,
@@ -445,8 +501,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                         controller: _bodyweightController,
                         label: 'Bodyweight (kg)',
                         keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty == true ? 'Required' : null,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -514,6 +568,27 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                   controller: _energyController,
                   label: 'Energy (kcal)',
                   keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _avgHeartRateController,
+                        label: 'Avg. Heart Rate (bpm)',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _maxHeartRateController,
+                        label: 'Max. Heart Rate (bpm)',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
@@ -599,18 +674,22 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           vertical: 16,
         ),
       ),
-      items: WorkoutType.values.map((WorkoutType type) {
-        return DropdownMenuItem<WorkoutType>(
-          value: type,
-          child: Text(type.displayName),
-        );
-      }).toList(),
+      items: [
+        const DropdownMenuItem<WorkoutType>(
+          value: null,
+          child: Text('Select Workout Type'),
+        ),
+        ...WorkoutType.values.map((WorkoutType type) {
+          return DropdownMenuItem<WorkoutType>(
+            value: type,
+            child: Text(type.displayName),
+          );
+        }).toList(),
+      ],
       onChanged: (WorkoutType? newValue) {
-        if (newValue != null) {
-          setState(() {
-            _selectedWorkout = newValue;
-          });
-        }
+        setState(() {
+          _selectedWorkout = newValue;
+        });
       },
     );
   }
@@ -620,7 +699,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     required String label,
     TextInputType? keyboardType,
     int maxLines = 1,
-    String? Function(String?)? validator,
   }) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
@@ -628,7 +706,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      validator: validator,
       style: TextStyle(color: scheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
