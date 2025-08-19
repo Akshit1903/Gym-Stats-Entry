@@ -246,7 +246,7 @@ class _GraphsPageState extends State<GraphsPage> {
           ),
           const SizedBox(height: 16),
           _buildChartCard(
-            'BMR Progress',
+            'BMR (Basal Metabolic Rate)',
             'BMR (kcal)',
             _createDataPoints(6, 'BMR'),
             Colors.purple,
@@ -255,21 +255,21 @@ class _GraphsPageState extends State<GraphsPage> {
           _buildChartCard(
             'Energy Expenditure',
             'Energy (kcal)',
-            _createDataPoints(7, 'Energy'),
+            _createDataPoints(8, 'Energy'),
             Colors.amber,
           ),
           const SizedBox(height: 16),
           _buildChartCard(
             'Average Heart Rate',
             'Heart Rate (bpm)',
-            _createDataPoints(8, 'AvgHeartRate'),
+            _createDataPoints(9, 'AvgHeartRate'),
             Colors.pink,
           ),
           const SizedBox(height: 16),
           _buildChartCard(
             'Maximum Heart Rate',
             'Heart Rate (bpm)',
-            _createDataPoints(9, 'MaxHeartRate'),
+            _createDataPoints(10, 'MaxHeartRate'),
             Colors.deepOrange,
           ),
         ],
@@ -373,7 +373,7 @@ class _GraphsPageState extends State<GraphsPage> {
                     ),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        showTitles: true,
+                        showTitles: false,
                         interval: 2,
                         reservedSize: 40,
                         getTitlesWidget: (double value, TitleMeta meta) {
