@@ -7,6 +7,7 @@ import './auth.dart';
 import './settings_page.dart';
 import './samsung_health_service.dart';
 import './graphs_page.dart';
+import 'package:home_widget/home_widget.dart';
 
 // Workout type enum
 enum WorkoutType {
@@ -334,6 +335,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           // Reset form to original values (null)
           _resetForm();
 
+          await _handleNoOfGymDaysHomeWidgetUpdate();
+
           // Navigate to graphs page
           Navigator.push(
             context,
@@ -398,6 +401,26 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _notesController.clear();
   }
 
+  Future<void> _handleNoOfGymDaysHomeWidgetUpdate() async {
+    final authorization = await getAccessToken(widget.user);
+    final Uri uri = Uri.parse(await SettingsService().getApiUrl());
+    var headers = {
+      if (authorization != null) 'Authorization': "Bearer $authorization",
+      'Content-Type': 'application/json',
+    };
+    var body = json.encode({
+      "function": "getNumberOfDaysIWentToGymInLast7Days",
+    });
+
+    final response = await http.post(uri, headers: headers, body: body);
+    final String noOfGymDays =
+        (response.statusCode == 200 || response.statusCode == 201)
+        ? (json.decode(response.body)['response']['result'] as int?).toString()
+        : "-";
+    HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
+    HomeWidget.updateWidget(androidName: "GymDaysWidget");
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -410,6 +433,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         foregroundColor: scheme.onSurface,
         elevation: 0,
         actions: [
+          IconButton(
+            onPressed: _handleNoOfGymDaysHomeWidgetUpdate,
+            icon: Icon(Icons.refresh, color: scheme.onSurfaceVariant),
+          ),
           IconButton(
             onPressed: () => {
               Navigator.push(
