@@ -3,7 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
-import './settings_service.dart';
+import 'settings/settings_service.dart';
 import 'package:intl/intl.dart';
 
 class GraphsPage extends StatefulWidget {

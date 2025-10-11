@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:gym_stats_entry_client/settings_service.dart';
+import 'package:gym_stats_entry_client/apps_scripts_client.dart';
+import 'package:gym_stats_entry_client/settings/settings_service.dart';
+import 'package:gym_stats_entry_client/utils.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import './auth.dart';
-import './settings_page.dart';
+import 'settings/settings_page.dart';
 import './samsung_health_service.dart';
 import './graphs_page.dart';
 import 'package:home_widget/home_widget.dart';
@@ -36,6 +38,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _dateController = TextEditingController();
   bool _isSubmitting = false;
+  late AppsScriptsClient _appsScriptsClient;
+  String _noOfGymDays = "-";
   WorkoutType? _selectedWorkout;
 
   // Form field controllers
@@ -54,7 +58,9 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   void initState() {
     super.initState();
     // Set today's date as default
-    _dateController.text = _formatDate(DateTime.now());
+    _dateController.text = Utils.formatDate(DateTime.now());
+    _appsScriptsClient = AppsScriptsClient(widget.user);
+    _handleNoOfGymDaysHomeWidgetUpdate();
   }
 
   @override
@@ -71,54 +77,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _maxHeartRateController.dispose();
     _notesController.dispose();
     super.dispose();
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[date.month - 1]} ${date.day}';
-  }
-
-  DateTime _parseFormattedDate(String formattedDate) {
-    final parts = formattedDate.split(' ');
-    if (parts.length == 2) {
-      final month = parts[0];
-      final day = int.tryParse(parts[1]);
-      if (day != null) {
-        const months = [
-          'January',
-          'February',
-          'March',
-          'April',
-          'May',
-          'June',
-          'July',
-          'August',
-          'September',
-          'October',
-          'November',
-          'December',
-        ];
-        final monthIndex = months.indexOf(month);
-        if (monthIndex != -1) {
-          final year = DateTime.now().year;
-          return DateTime(year, monthIndex + 1, day);
-        }
-      }
-    }
-    return DateTime.now();
   }
 
   Future<void> _signOut() async {
@@ -173,7 +131,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       }
 
       // Get the selected date
-      final selectedDate = _parseFormattedDate(_dateController.text);
+      final selectedDate = Utils.parseFormattedDate(_dateController.text);
 
       // Check if data exists for the selected date
       final hasData = await samsungHealthService.hasDataForDate(selectedDate);
@@ -268,111 +226,60 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       _isSubmitting = true;
     });
 
-    try {
-      // Prepare the data for the POST request
-      final workoutData = {
-        'Date': _dateController.text,
-        'Bodyweight': _bodyweightController.text.isNotEmpty
-            ? double.tryParse(_bodyweightController.text)
-            : null,
-        'SkeletalMass': _skeletalMassController.text.isNotEmpty
-            ? double.tryParse(_skeletalMassController.text)
-            : null,
-        'FatMass': _fatMassController.text.isNotEmpty
-            ? double.tryParse(_fatMassController.text)
-            : null,
-        'BodyWater': _bodyWaterController.text.isNotEmpty
-            ? double.tryParse(_bodyWaterController.text)
-            : null,
-        'FatPercent': _fatPercentageController.text.isNotEmpty
-            ? double.tryParse(_fatPercentageController.text)
-            : null,
-        'BMR': _bmrController.text.isNotEmpty
-            ? double.tryParse(_bmrController.text)
-            : null,
-        'Workout': _selectedWorkout?.displayName,
-        'Energy': _energyController.text.isNotEmpty
-            ? int.tryParse(_energyController.text)
-            : null,
-        'AvgHeartRate': _avgHeartRateController.text.isNotEmpty
-            ? int.tryParse(_avgHeartRateController.text)
-            : null,
-        'MaxHeartRate': _maxHeartRateController.text.isNotEmpty
-            ? int.tryParse(_maxHeartRateController.text)
-            : null,
-        'Notes': _notesController.text.isNotEmpty
-            ? _notesController.text
-            : null,
-      };
+    final workoutData = {
+      'Date': _dateController.text,
+      'Bodyweight': _bodyweightController.text.isNotEmpty
+          ? double.tryParse(_bodyweightController.text)
+          : null,
+      'SkeletalMass': _skeletalMassController.text.isNotEmpty
+          ? double.tryParse(_skeletalMassController.text)
+          : null,
+      'FatMass': _fatMassController.text.isNotEmpty
+          ? double.tryParse(_fatMassController.text)
+          : null,
+      'BodyWater': _bodyWaterController.text.isNotEmpty
+          ? double.tryParse(_bodyWaterController.text)
+          : null,
+      'FatPercent': _fatPercentageController.text.isNotEmpty
+          ? double.tryParse(_fatPercentageController.text)
+          : null,
+      'BMR': _bmrController.text.isNotEmpty
+          ? double.tryParse(_bmrController.text)
+          : null,
+      'Workout': _selectedWorkout?.displayName,
+      'Energy': _energyController.text.isNotEmpty
+          ? int.tryParse(_energyController.text)
+          : null,
+      'AvgHeartRate': _avgHeartRateController.text.isNotEmpty
+          ? int.tryParse(_avgHeartRateController.text)
+          : null,
+      'MaxHeartRate': _maxHeartRateController.text.isNotEmpty
+          ? int.tryParse(_maxHeartRateController.text)
+          : null,
+      'Notes': _notesController.text.isNotEmpty ? _notesController.text : null,
+    };
 
-      // Get API URL from settings
-      final apiUrl = await SettingsService().getApiUrl();
-      if (apiUrl.isEmpty) {
-        throw Exception('API URL not configured. Please set it in Settings.');
-      }
-      final authorization = await getAccessToken(widget.user);
-      final Uri uri = Uri.parse(await SettingsService().getApiUrl());
-      var headers = {
-        if (authorization != null) 'Authorization': "Bearer $authorization",
-        'Content-Type': 'application/json',
-      };
-      var body = json.encode({
-        "function": "addBodyCompositionEntry",
-        "parameters": [workoutData],
-      });
-
-      final response = await http.post(uri, headers: headers, body: body);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Workout entry added successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          // Reset form to original values (null)
-          _resetForm();
-
-          await _handleNoOfGymDaysHomeWidgetUpdate();
-
-          // Navigate to graphs page
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => GraphsPage(user: widget.user),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Failed to add workout entry. Status: ${response.statusCode.toString() + " Message: " + (response.reasonPhrase ?? "")}',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+    Future<void> postSuccessCallback() async {
+      _resetForm();
+      _handleNoOfGymDaysHomeWidgetUpdate();
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => GraphsPage(user: widget.user)),
+      );
     }
+
+    _appsScriptsClient.callAppsScript(
+      "addBodyCompositionEntry",
+      [workoutData],
+      context,
+      'Workout entry added successfully!',
+      postSuccessCallback,
+      "Failed to add workout entry.",
+    );
+
+    setState(() {
+      _isSubmitting = false;
+    });
   }
 
   Future<String?> getAccessToken(
@@ -385,9 +292,31 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     return googleSignInAuthentication.accessToken;
   }
 
+  Future<String> _handleNoOfGymDaysHomeWidgetUpdate() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final String? noOfGymDays = await _appsScriptsClient.callAppsScript(
+      "getNumberOfDaysIWentToGymInLast7Days",
+      [],
+      context,
+      "No. of gym days fetched successfully.",
+      () => {},
+      "Failed to fetch no. of gym days.",
+    );
+    HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
+    HomeWidget.updateWidget(androidName: "GymDaysWidget");
+    _noOfGymDays = noOfGymDays ?? "-";
+    setState(() {
+      _isSubmitting = false;
+    });
+    return noOfGymDays ?? "-";
+  }
+
   void _resetForm() {
     _formKey.currentState!.reset();
-    _dateController.text = _formatDate(DateTime.now());
+    _dateController.text = Utils.formatDate(DateTime.now());
     _selectedWorkout = null;
     _bodyweightController.clear();
     _skeletalMassController.clear();
@@ -401,24 +330,18 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _notesController.clear();
   }
 
-  Future<void> _handleNoOfGymDaysHomeWidgetUpdate() async {
-    final authorization = await getAccessToken(widget.user);
-    final Uri uri = Uri.parse(await SettingsService().getApiUrl());
-    var headers = {
-      if (authorization != null) 'Authorization': "Bearer $authorization",
-      'Content-Type': 'application/json',
-    };
-    var body = json.encode({
-      "function": "getNumberOfDaysIWentToGymInLast7Days",
-    });
-
-    final response = await http.post(uri, headers: headers, body: body);
-    final String noOfGymDays =
-        (response.statusCode == 200 || response.statusCode == 201)
-        ? (json.decode(response.body)['response']['result'] as int?).toString()
-        : "-";
-    HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
-    HomeWidget.updateWidget(androidName: "GymDaysWidget");
+  Color _parseNoOfGymDaysColor(String noOfGymDays) {
+    if (noOfGymDays == "-") {
+      return Colors.white;
+    }
+    final days = int.tryParse(noOfGymDays) ?? 0;
+    if (days >= 6) {
+      return Colors.green;
+    } else if (days >= 4) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
   }
 
   @override
@@ -434,8 +357,16 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: _handleNoOfGymDaysHomeWidgetUpdate,
-            icon: Icon(Icons.refresh, color: scheme.onSurfaceVariant),
+            onPressed: _isSubmitting
+                ? null
+                : _handleNoOfGymDaysHomeWidgetUpdate,
+            icon: _isSubmitting
+                ? SizedBox(
+                    height: 15,
+                    width: 15,
+                    child: CircularProgressIndicator(),
+                  )
+                : Icon(Icons.refresh, color: scheme.onSurfaceVariant),
           ),
           IconButton(
             onPressed: () => {
@@ -476,19 +407,25 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
-                Text(
-                  'Track Your Progress',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Add your workout details and body measurements',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Gym Consistency: ',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                    ),
+                    Text(
+                      _noOfGymDays,
+                      style: Theme.of(context).textTheme.headlineLarge
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: _parseNoOfGymDaysColor(_noOfGymDays),
+                          ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
@@ -764,12 +701,12 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       onTap: () async {
         final date = await showDatePicker(
           context: context,
-          initialDate: _parseFormattedDate(_dateController.text),
+          initialDate: Utils.parseFormattedDate(_dateController.text),
           firstDate: DateTime(2020),
           lastDate: DateTime.now().add(const Duration(days: 1)),
         );
         if (date != null) {
-          _dateController.text = _formatDate(date);
+          _dateController.text = Utils.formatDate(date);
         }
       },
       style: TextStyle(color: scheme.onSurface),
