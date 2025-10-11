@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
-import 'package:gym_stats_entry_client/settings/settings_service.dart';
 import 'package:gym_stats_entry_client/utils.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import './auth.dart';
 import 'settings/settings_page.dart';
 import './samsung_health_service.dart';
@@ -259,23 +256,21 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       'Notes': _notesController.text.isNotEmpty ? _notesController.text : null,
     };
 
-    Future<void> postSuccessCallback() async {
-      _resetForm();
-      _handleNoOfGymDaysHomeWidgetUpdate();
+    await _appsScriptsClient.callAppsScript(
+      "addBodyCompositionEntry",
+      [workoutData],
+      context,
+      'Workout entry added successfully!',
+      "Failed to add workout entry.",
+    );
+    _resetForm();
+    _handleNoOfGymDaysHomeWidgetUpdate();
+    if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => GraphsPage(user: widget.user)),
       );
     }
-
-    _appsScriptsClient.callAppsScript(
-      "addBodyCompositionEntry",
-      [workoutData],
-      context,
-      'Workout entry added successfully!',
-      postSuccessCallback,
-      "Failed to add workout entry.",
-    );
 
     setState(() {
       _isSubmitting = false;
@@ -302,7 +297,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       [],
       context,
       "No. of gym days fetched successfully.",
-      () => {},
       "Failed to fetch no. of gym days.",
     );
     HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);

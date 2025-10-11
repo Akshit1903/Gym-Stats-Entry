@@ -24,17 +24,13 @@ class AppsScriptsClient {
     final String functionName,
     final List<dynamic> parameters,
     BuildContext context,
-    String successMessage,
-    Function postSuccessCallback,
-    String errorMessage,
+    String? successMessage,
+    String? errorMessage,
   ) async {
     try {
       final apiUrl = await SettingsService().getApiUrl();
-      if (apiUrl.isEmpty) {
-        throw Exception('API URL not configured. Please set it in Settings.');
-      }
+      final Uri uri = Uri.parse(apiUrl);
       final authorization = await _getAccessToken(_user);
-      final Uri uri = Uri.parse(await SettingsService().getApiUrl());
       var headers = {
         if (authorization != null) 'Authorization': "Bearer $authorization",
         'Content-Type': 'application/json',
@@ -46,17 +42,18 @@ class AppsScriptsClient {
 
       final response = await http.post(uri, headers: headers, body: body);
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 200) {
         if (context.mounted) {
-          await postSuccessCallback();
-          String result = jsonDecode(
-            response.body,
-          )["response"]["result"].toString();
-          Utils.showSnackBar(successMessage, Colors.green, context);
+          Map<String, dynamic> responseJson = jsonDecode(response.body);
+          assert(responseJson["done"] as bool);
+          String result = responseJson["response"]["result"].toString();
+          if (successMessage != null) {
+            Utils.showSnackBar(successMessage, Colors.green, context);
+          }
           return result;
         }
       } else {
-        if (context.mounted) {
+        if (context.mounted && errorMessage != null) {
           Utils.showSnackBar(
             '$errorMessage Status: ${response.statusCode.toString()}  Message: ${(response.reasonPhrase ?? "")}',
             Colors.red,
@@ -65,7 +62,7 @@ class AppsScriptsClient {
         }
       }
     } catch (e) {
-      if (context.mounted) {
+      if (context.mounted && errorMessage != null) {
         Utils.showSnackBar("Error: ${e.toString()}", Colors.red, context);
       }
     }

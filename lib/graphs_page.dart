@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'settings/settings_service.dart';
 import 'package:intl/intl.dart';
 
 class GraphsPage extends StatefulWidget {
@@ -19,10 +17,12 @@ class _GraphsPageState extends State<GraphsPage> {
   List<List<dynamic>> _workoutData = [];
   bool _isLoading = true;
   String? _error;
+  late AppsScriptsClient _appsScriptsClient;
 
   @override
   void initState() {
     super.initState();
+    _appsScriptsClient = AppsScriptsClient(widget.user);
     _fetchWorkoutData();
   }
 
@@ -33,73 +33,52 @@ class _GraphsPageState extends State<GraphsPage> {
         _error = null;
       });
 
-      final apiUrl = await SettingsService().getApiUrl();
-      if (apiUrl.isEmpty) {
-        throw Exception('API URL not configured. Please set it in Settings.');
-      }
+      final workoutData = await _appsScriptsClient.callAppsScript(
+        "getAllBodyCompositionEntries",
+        [],
+        context,
+        null,
+        "Error fetching graphs data",
+      );
 
-      final authorization = await _getAccessToken(widget.user);
-      final Uri uri = Uri.parse(apiUrl);
-      var headers = {
-        if (authorization != null) 'Authorization': "Bearer $authorization",
-        'Content-Type': 'application/json',
-      };
-      var body = json.encode({
-        "function": "getAllBodyCompositionEntries",
-        "parameters": [],
-      });
-
-      final response = await http.post(uri, headers: headers, body: body);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['done'] == true && data['response'] != null) {
-          setState(() {
-            List<String> inter = data['response']['result'].toString().split(
-              "@#@",
-            );
-            _workoutData = List<List<dynamic>>.from(
-              inter.map((e) => e.split("|&")),
-            );
-            _isLoading = false;
-          });
-        } else {
-          throw Exception('Failed to parse workout data');
-        }
-      } else {
-        throw Exception(
-          'Failed to fetch workout data. Status: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
       setState(() {
-        _error = e.toString();
+        List<String> inter = workoutData.toString().split("@#@");
+        _workoutData = List<List<dynamic>>.from(
+          inter.map((e) => e.split("|&")),
+        );
         _isLoading = false;
       });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  Future<String?> _getAccessToken(
-    GoogleSignInAccount? googleSignInAccount,
-  ) async {
-    if (googleSignInAccount == null) {
-      return null;
-    }
-    final googleSignInAuthentication = await googleSignInAccount.authentication;
-    return googleSignInAuthentication.accessToken;
   }
 
   List<FlSpot> _createDataPoints(int dataIndex, String label) {
     final spots = <FlSpot>[];
-    for (int i = 0; i < _workoutData.length; i++) {
-      final row = _workoutData[i];
+    final currentWorkoutData = _workoutData
+        .where(
+          (row) =>
+              row[0] != null &&
+              row[0] != "" &&
+              dataIndex < row.length &&
+              row[dataIndex] != null &&
+              row[dataIndex] != "",
+        )
+        .toList();
+    for (int i = 0; i < currentWorkoutData.length; i++) {
+      final row = currentWorkoutData[i];
       if (row.isEmpty || row[0] == null || row[0] == "") continue;
       if (row.length > dataIndex && row[dataIndex] != null) {
         final value = double.tryParse(row[dataIndex].toString());
         if (value != null) {
-          double x = _workoutData.length == 1
+          double x = currentWorkoutData.length == 1
               ? 0
-              : i / (_workoutData.length - 1);
+              : i / (currentWorkoutData.length - 1);
           spots.add(FlSpot(x, value));
         }
       }

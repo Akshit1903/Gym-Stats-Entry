@@ -9,8 +9,7 @@ class SettingsService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getString(_apiUrlKey) ?? '';
     } catch (e) {
-      // Return empty string if there's an error
-      return '';
+      throw Exception('API URL not configured. Please set it in Settings.');
     }
   }
 
@@ -24,12 +23,6 @@ class SettingsService {
     }
   }
 
-  // Check if API URL is configured
-  Future<bool> isApiUrlConfigured() async {
-    final url = await getApiUrl();
-    return url.isNotEmpty;
-  }
-
   // Clear the stored API URL
   Future<bool> clearApiUrl() async {
     try {
@@ -39,4 +32,4 @@ class SettingsService {
       return false;
     }
   }
-} 
+}
