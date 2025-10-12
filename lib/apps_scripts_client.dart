@@ -7,8 +7,10 @@ import 'package:gym_stats_entry_client/settings/settings_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AppsScriptsClient {
-  final GoogleSignInAccount? _user;
-  AppsScriptsClient(this._user);
+  static final AppsScriptsClient instance = AppsScriptsClient._();
+  AppsScriptsClient._();
+
+  GoogleSignInAccount? _user;
 
   Future<String?> _getAccessToken(
     GoogleSignInAccount? googleSignInAccount,
@@ -20,7 +22,11 @@ class AppsScriptsClient {
     return googleSignInAuthentication.accessToken;
   }
 
-  Future<dynamic> callAppsScript(
+  void setUser(GoogleSignInAccount? user) {
+    _user = user;
+  }
+
+  Future<String?> _callAppsScript(
     final String functionName,
     final List<dynamic> parameters,
     BuildContext? context,
@@ -60,14 +66,15 @@ class AppsScriptsClient {
         }
       }
     } catch (e) {
-      if (context != null && context.mounted && errorMessage != null) {
+      if (context != null && context.mounted) {
         Utils.showSnackBar("Error: ${e.toString()}", Colors.red, context);
       }
     }
+    return null;
   }
 
   Future<String> getNumberOfGymDays([BuildContext? context]) async {
-    final String? noOfGymDays = await callAppsScript(
+    final String? noOfGymDays = await _callAppsScript(
       "getNumberOfDaysIWentToGymInLast7Days",
       [],
       context,
@@ -75,5 +82,29 @@ class AppsScriptsClient {
       "Failed to fetch no. of gym days.",
     );
     return noOfGymDays ?? "-";
+  }
+
+  Future<String> getWorkoutData([BuildContext? context]) async {
+    return await _callAppsScript(
+          "getAllBodyCompositionEntries",
+          [],
+          context,
+          null,
+          "Error fetching graphs data",
+        ) ??
+        "";
+  }
+
+  Future<void> submitBodyCompositionEntry(
+    Map<String, dynamic> workoutData, [
+    BuildContext? context,
+  ]) async {
+    await _callAppsScript(
+      "addBodyCompositionEntry",
+      [workoutData],
+      context,
+      'Workout entry added successfully!',
+      "Failed to add workout entry.",
+    );
   }
 }

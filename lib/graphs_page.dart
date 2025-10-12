@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 class GraphsPage extends StatefulWidget {
-  const GraphsPage({super.key, required this.user});
-
-  final GoogleSignInAccount user;
+  const GraphsPage({super.key});
 
   @override
   State<GraphsPage> createState() => _GraphsPageState();
@@ -22,7 +19,7 @@ class _GraphsPageState extends State<GraphsPage> {
   @override
   void initState() {
     super.initState();
-    _appsScriptsClient = AppsScriptsClient(widget.user);
+    _appsScriptsClient = AppsScriptsClient.instance;
     _fetchWorkoutData();
   }
 
@@ -33,13 +30,7 @@ class _GraphsPageState extends State<GraphsPage> {
         _error = null;
       });
 
-      final workoutData = await _appsScriptsClient.callAppsScript(
-        "getAllBodyCompositionEntries",
-        [],
-        context,
-        null,
-        "Error fetching graphs data",
-      );
+      final workoutData = await _appsScriptsClient.getWorkoutData(context);
 
       setState(() {
         List<String> inter = workoutData.toString().split("@#@");

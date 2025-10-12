@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import './auth.dart';
+import 'providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 class SignInView extends StatefulWidget {
-  const SignInView({super.key, required this.authService, this.onSignedIn});
-
-  final AuthService authService;
-  final ValueChanged<GoogleSignInAccount?>? onSignedIn;
-
+  const SignInView({super.key});
   @override
   State<SignInView> createState() => _SignInViewState();
 }
@@ -28,7 +24,7 @@ class _SignInViewState extends State<SignInView>
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool isBusy = widget.authService.isSigningIn;
+    final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -38,11 +34,10 @@ class _SignInViewState extends State<SignInView>
             final bool isWide = constraints.maxWidth > 560;
             final Widget art = _HeroArt(controller: _controller);
             final Widget panel = _SignInPanel(
-              isBusy: isBusy,
+              isBusy: authProvider.isSigningIn,
               onPressed: () async {
-                GoogleSignInAccount? user;
                 try {
-                  user = await widget.authService.signIn();
+                  await authProvider.signIn();
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -54,8 +49,6 @@ class _SignInViewState extends State<SignInView>
                     );
                   }
                 }
-                if (!mounted) return;
-                widget.onSignedIn?.call(user);
               },
             );
 

@@ -1,20 +1,30 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 
-class AuthService extends ChangeNotifier {
-  static const _SCOPES = [
+class AuthProvider extends ChangeNotifier {
+  static const SCOPES = [
     "https://www.googleapis.com/auth/script.projects",
     "https://www.googleapis.com/auth/spreadsheets",
     'https://www.googleapis.com/auth/drive.file',
   ];
-  final GoogleSignIn _signIn = GoogleSignIn(scopes: _SCOPES);
+  final GoogleSignIn _signIn = GoogleSignIn(scopes: SCOPES);
 
   GoogleSignInAccount? _currentUser;
   GoogleSignInAccount? get currentUser => _currentUser;
 
   bool _isSigningIn = false;
   bool get isSigningIn => _isSigningIn;
+
+  AuthProvider() {
+    silentSignIn();
+    _signIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) async {
+      _currentUser = account;
+      AppsScriptsClient.instance.setUser(account);
+      notifyListeners();
+    });
+  }
 
   Future<GoogleSignInAccount?> signIn() async {
     if (_currentUser != null) {
@@ -36,5 +46,9 @@ class AuthService extends ChangeNotifier {
 
   Future<void> silentSignIn() async {
     _currentUser = await _signIn.signInSilently();
+  }
+
+  Future<bool> isSignedIn() async {
+    return await _signIn.isSignedIn();
   }
 }

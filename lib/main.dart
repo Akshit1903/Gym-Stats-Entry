@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
-import 'package:gym_stats_entry_client/auth.dart';
+import 'package:gym_stats_entry_client/providers/auth_provider.dart';
 import 'package:gym_stats_entry_client/sign_in_view.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:gym_stats_entry_client/workout/workout_form_page.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     switch (task) {
       case "updateGymDays":
-        final appsScriptsClient = AppsScriptsClient(null);
+        final GoogleSignIn signIn = GoogleSignIn(scopes: AuthProvider.SCOPES);
+        final GoogleSignInAccount? user = await signIn.signInSilently();
+        AppsScriptsClient.instance.setUser(user);
+        final appsScriptsClient = AppsScriptsClient.instance;
         String noOfGymDays = await appsScriptsClient.getNumberOfGymDays();
         await Utils.updateNoOfGymDaysHomeWidget(noOfGymDays);
     }
@@ -21,8 +25,7 @@ void callbackDispatcher() {
 }
 
 Future<void> initWorkManager() async {
-  await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-
+  await Workmanager().initialize(callbackDispatcher);
   // 🔁 Regular periodic task (runs every 2 hours)
   await Workmanager().registerPeriodicTask(
     "gymWidgetTask",
@@ -32,11 +35,11 @@ Future<void> initWorkManager() async {
   );
 
   // ⚡ Immediate one-off debug task (runs after 10 seconds)
-  await Workmanager().registerOneOffTask(
-    "debugGymWidgetTask",
-    "updateGymDays",
-    initialDelay: const Duration(seconds: 10),
-  );
+  // await Workmanager().registerOneOffTask(
+  //   "debugGymWidgetTask",
+  //   "updateGymDays",
+  //   initialDelay: const Duration(seconds: 10),
+  // );
 }
 
 void main() async {
@@ -50,7 +53,10 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(theme: ThemeData.dark(), home: const AppWrapper());
+    return MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
+      child: MaterialApp(theme: ThemeData.dark(), home: const AppWrapper()),
+    );
   }
 }
 
@@ -62,55 +68,26 @@ class AppWrapper extends StatefulWidget {
 }
 
 class _AppWrapperState extends State<AppWrapper> {
-  final AuthService _authService = AuthService();
-  GoogleSignInAccount? _currentUser;
-
-  @override
-  void initState() {
-    super.initState();
-    _authService.addListener(_onAuthStateChanged);
-    _authService.silentSignIn().then((_) {
-      if (mounted) {
-        setState(() {
-          _currentUser = _authService.currentUser;
-        });
-        initWorkManager();
-      }
-    });
-    _currentUser = _authService.currentUser;
-  }
-
-  @override
-  void dispose() {
-    _authService.removeListener(_onAuthStateChanged);
-    super.dispose();
-  }
-
-  void _onAuthStateChanged() {
-    setState(() {
-      _currentUser = _authService.currentUser;
-    });
-  }
-
-  void _onSignedIn(GoogleSignInAccount? user) {
-    setState(() {
-      _currentUser = user;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_currentUser != null) {
-      return WorkoutFormPage(
-        user: _currentUser!,
-        onSignOut: () {
-          setState(() {
-            _currentUser = null;
-          });
-        },
-      );
-    } else {
-      return SignInView(authService: _authService, onSignedIn: _onSignedIn);
-    }
+    final AuthProvider authProvider = Provider.of<AuthProvider>(context);
+
+    return FutureBuilder(
+      future: authProvider.isSignedIn(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
+        }
+        final isSignedIn = snapshot.data ?? false;
+        return isSignedIn ? WorkoutFormPage() : SignInView();
+      },
+    );
   }
 }

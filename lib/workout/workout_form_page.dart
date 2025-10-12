@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:home_widget/home_widget.dart';
-import '../auth.dart';
+import '../providers/auth_provider.dart';
 import '../settings/settings_page.dart';
 import '../samsung_health_service.dart';
 import '../graphs_page.dart';
 import 'WorkoutType.dart';
 
 class WorkoutFormPage extends StatefulWidget {
-  const WorkoutFormPage({super.key, required this.user, this.onSignOut});
-
-  final GoogleSignInAccount user;
-  final VoidCallback? onSignOut;
+  const WorkoutFormPage({super.key});
 
   @override
   State<WorkoutFormPage> createState() => _WorkoutFormPageState();
@@ -26,6 +23,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   late AppsScriptsClient _appsScriptsClient;
   String _noOfGymDays = "-";
   WorkoutType? _selectedWorkout;
+  late AuthProvider _authProvider;
 
   // Form field controllers
   final _bodyweightController = TextEditingController();
@@ -42,10 +40,15 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   @override
   void initState() {
     super.initState();
-    // Set today's date as default
     _dateController.text = Utils.formatDate(DateTime.now());
-    _appsScriptsClient = AppsScriptsClient(widget.user);
+    _appsScriptsClient = AppsScriptsClient.instance;
     _handleNoOfGymDaysHomeWidgetUpdate();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _authProvider = Provider.of<AuthProvider>(context);
   }
 
   @override
@@ -62,14 +65,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _maxHeartRateController.dispose();
     _notesController.dispose();
     super.dispose();
-  }
-
-  Future<void> _signOut() async {
-    final authService = AuthService();
-    await authService.signOut();
-    if (widget.onSignOut != null) {
-      widget.onSignOut!();
-    }
   }
 
   Future<void> _openSettings() async {
@@ -244,19 +239,13 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       'Notes': _notesController.text.isNotEmpty ? _notesController.text : null,
     };
 
-    await _appsScriptsClient.callAppsScript(
-      "addBodyCompositionEntry",
-      [workoutData],
-      context,
-      'Workout entry added successfully!',
-      "Failed to add workout entry.",
-    );
+    await _appsScriptsClient.submitBodyCompositionEntry(workoutData, context);
     _resetForm();
     _handleNoOfGymDaysHomeWidgetUpdate();
     if (mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => GraphsPage(user: widget.user)),
+        MaterialPageRoute(builder: (context) => GraphsPage()),
       );
     }
 
@@ -271,12 +260,15 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     });
 
     _noOfGymDays = await _appsScriptsClient.getNumberOfGymDays(context);
-
-    setState(() {
+    if (mounted) {
+      setState(() {
+        _isSubmitting = false;
+      });
+    } else {
       _isSubmitting = false;
-    });
+    }
 
-    Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
+    // Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
   }
 
   void _resetForm() {
@@ -337,9 +329,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             onPressed: () => {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => GraphsPage(user: widget.user),
-                ),
+                MaterialPageRoute(builder: (context) => GraphsPage()),
               ),
             },
             icon: Icon(Icons.auto_graph, color: scheme.onSurfaceVariant),
@@ -351,13 +341,15 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           ),
           const SizedBox(width: 8),
           CircleAvatar(
-            backgroundImage: NetworkImage(widget.user.photoUrl ?? ''),
+            backgroundImage: NetworkImage(
+              _authProvider.currentUser?.photoUrl ?? '',
+            ),
             radius: 16,
           ),
           const SizedBox(width: 16),
           IconButton(
             icon: Icon(Icons.logout, color: scheme.onSurfaceVariant),
-            onPressed: _signOut,
+            onPressed: _authProvider.signOut,
             tooltip: 'Sign Out',
           ),
           const SizedBox(width: 8),
