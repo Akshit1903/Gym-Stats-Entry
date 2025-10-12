@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:gym_stats_entry_client/utils.dart';
+import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:gym_stats_entry_client/settings/settings_service.dart';
@@ -23,7 +23,7 @@ class AppsScriptsClient {
   Future<dynamic> callAppsScript(
     final String functionName,
     final List<dynamic> parameters,
-    BuildContext context,
+    BuildContext? context,
     String? successMessage,
     String? errorMessage,
   ) async {
@@ -43,17 +43,15 @@ class AppsScriptsClient {
       final response = await http.post(uri, headers: headers, body: body);
 
       if (response.statusCode == 200) {
-        if (context.mounted) {
-          Map<String, dynamic> responseJson = jsonDecode(response.body);
-          assert(responseJson["done"] as bool);
-          String result = responseJson["response"]["result"].toString();
-          if (successMessage != null) {
-            Utils.showSnackBar(successMessage, Colors.green, context);
-          }
-          return result;
+        Map<String, dynamic> responseJson = jsonDecode(response.body);
+        assert(responseJson["done"] as bool);
+        String result = responseJson["response"]["result"].toString();
+        if (context != null && context.mounted && successMessage != null) {
+          Utils.showSnackBar(successMessage, Colors.green, context);
         }
+        return result;
       } else {
-        if (context.mounted && errorMessage != null) {
+        if (context != null && context.mounted && errorMessage != null) {
           Utils.showSnackBar(
             '$errorMessage Status: ${response.statusCode.toString()}  Message: ${(response.reasonPhrase ?? "")}',
             Colors.red,
@@ -62,9 +60,20 @@ class AppsScriptsClient {
         }
       }
     } catch (e) {
-      if (context.mounted && errorMessage != null) {
+      if (context != null && context.mounted && errorMessage != null) {
         Utils.showSnackBar("Error: ${e.toString()}", Colors.red, context);
       }
     }
+  }
+
+  Future<String> getNumberOfGymDays([BuildContext? context]) async {
+    final String? noOfGymDays = await callAppsScript(
+      "getNumberOfDaysIWentToGymInLast7Days",
+      [],
+      context,
+      "No. of gym days fetched successfully.",
+      "Failed to fetch no. of gym days.",
+    );
+    return noOfGymDays ?? "-";
   }
 }

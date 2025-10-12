@@ -1,25 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
-import 'package:gym_stats_entry_client/utils.dart';
-import './auth.dart';
-import 'settings/settings_page.dart';
-import './samsung_health_service.dart';
-import './graphs_page.dart';
+import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:home_widget/home_widget.dart';
-
-// Workout type enum
-enum WorkoutType {
-  upper('Upper'),
-  lower('Lower'),
-  push('Push'),
-  pull('Pull'),
-  legs('Legs'),
-  active('Active');
-
-  const WorkoutType(this.displayName);
-  final String displayName;
-}
+import '../auth.dart';
+import '../settings/settings_page.dart';
+import '../samsung_health_service.dart';
+import '../graphs_page.dart';
+import 'WorkoutType.dart';
 
 class WorkoutFormPage extends StatefulWidget {
   const WorkoutFormPage({super.key, required this.user, this.onSignOut});
@@ -277,35 +265,18 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     });
   }
 
-  Future<String?> getAccessToken(
-    GoogleSignInAccount? googleSignInAccount,
-  ) async {
-    if (googleSignInAccount == null) {
-      return null;
-    }
-    final googleSignInAuthentication = await googleSignInAccount.authentication;
-    return googleSignInAuthentication.accessToken;
-  }
-
-  Future<String> _handleNoOfGymDaysHomeWidgetUpdate() async {
+  Future<void> _handleNoOfGymDaysHomeWidgetUpdate() async {
     setState(() {
       _isSubmitting = true;
     });
 
-    final String? noOfGymDays = await _appsScriptsClient.callAppsScript(
-      "getNumberOfDaysIWentToGymInLast7Days",
-      [],
-      context,
-      "No. of gym days fetched successfully.",
-      "Failed to fetch no. of gym days.",
-    );
-    HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
-    HomeWidget.updateWidget(androidName: "GymDaysWidget");
-    _noOfGymDays = noOfGymDays ?? "-";
+    _noOfGymDays = await _appsScriptsClient.getNumberOfGymDays(context);
+
     setState(() {
       _isSubmitting = false;
     });
-    return noOfGymDays ?? "-";
+
+    Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
   }
 
   void _resetForm() {
@@ -420,6 +391,25 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                           ),
                     ),
                   ],
+                ),
+                FutureBuilder(
+                  future: HomeWidget.getWidgetData<String>(
+                    'no_of_gym_days_time',
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      DateTime lastUpdated = DateTime.parse(
+                        snapshot.data!,
+                      ).toLocal();
+                      return Text(
+                        'Last updated: ${lastUpdated.hour}:${lastUpdated.minute}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
                 const SizedBox(height: 32),
 

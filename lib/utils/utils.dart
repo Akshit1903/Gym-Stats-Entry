@@ -1,22 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:gym_stats_entry_client/utils/constants.dart';
 
 class Utils {
   Utils._();
-
-  static const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
 
   static void showSnackBar(
     String message,
@@ -36,7 +23,7 @@ class Utils {
       final month = parts[0];
       final day = int.tryParse(parts[1]);
       if (day != null) {
-        final monthIndex = months.indexOf(month);
+        final monthIndex = Constants.months.indexOf(month);
         if (monthIndex != -1) {
           final year = DateTime.now().year;
           return DateTime(year, monthIndex + 1, day);
@@ -47,6 +34,15 @@ class Utils {
   }
 
   static String formatDate(DateTime date) {
-    return '${months[date.month - 1]} ${date.day}';
+    return '${Constants.months[date.month - 1]} ${date.day}';
+  }
+
+  static Future<void> updateNoOfGymDaysHomeWidget(String noOfGymDays) async {
+    await HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
+    await HomeWidget.saveWidgetData<String>(
+      'no_of_gym_days_time',
+      DateTime.now().toString(),
+    );
+    await HomeWidget.updateWidget(androidName: "GymDaysWidget");
   }
 }

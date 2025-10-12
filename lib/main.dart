@@ -1,11 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:gym_stats_entry_client/auth.dart';
 import 'package:gym_stats_entry_client/sign_in_view.dart';
-import 'package:gym_stats_entry_client/workout_form_page.dart';
+import 'package:gym_stats_entry_client/utils/utils.dart';
+import 'package:gym_stats_entry_client/workout/workout_form_page.dart';
+import 'package:workmanager/workmanager.dart';
 
-void main() {
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    switch (task) {
+      case "updateGymDays":
+        final appsScriptsClient = AppsScriptsClient(null);
+        String noOfGymDays = await appsScriptsClient.getNumberOfGymDays();
+        await Utils.updateNoOfGymDaysHomeWidget(noOfGymDays);
+    }
+    return true;
+  });
+}
+
+Future<void> initWorkManager() async {
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
+  // 🔁 Regular periodic task (runs every 2 hours)
+  await Workmanager().registerPeriodicTask(
+    "gymWidgetTask",
+    "updateGymDays",
+    frequency: const Duration(hours: 2),
+    initialDelay: const Duration(minutes: 1),
+  );
+
+  // ⚡ Immediate one-off debug task (runs after 10 seconds)
+  await Workmanager().registerOneOffTask(
+    "debugGymWidgetTask",
+    "updateGymDays",
+    initialDelay: const Duration(seconds: 10),
+  );
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initWorkManager();
   runApp(const MainApp());
 }
 
@@ -38,6 +74,7 @@ class _AppWrapperState extends State<AppWrapper> {
         setState(() {
           _currentUser = _authService.currentUser;
         });
+        initWorkManager();
       }
     });
     _currentUser = _authService.currentUser;
