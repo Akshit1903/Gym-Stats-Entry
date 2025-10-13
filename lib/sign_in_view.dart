@@ -14,6 +14,13 @@ class _SignInViewState extends State<SignInView>
     vsync: this,
     duration: const Duration(milliseconds: 900),
   )..forward();
+  late AuthProvider _authProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _authProvider = Provider.of<AuthProvider>(context);
+  }
 
   @override
   void dispose() {
@@ -24,7 +31,6 @@ class _SignInViewState extends State<SignInView>
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -34,10 +40,10 @@ class _SignInViewState extends State<SignInView>
             final bool isWide = constraints.maxWidth > 560;
             final Widget art = _HeroArt(controller: _controller);
             final Widget panel = _SignInPanel(
-              isBusy: authProvider.isSigningIn,
+              isBusy: _authProvider.isSigningIn,
               onPressed: () async {
                 try {
-                  await authProvider.signIn();
+                  await _authProvider.signIn();
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

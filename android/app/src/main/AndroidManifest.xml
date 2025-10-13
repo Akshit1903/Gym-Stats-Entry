@@ -21,6 +21,17 @@
         android:icon="@mipmap/launcher_icon"
         android:label="Gym Stats Entry">
         <receiver
+            android:name=".BodyWeight"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/body_weight_info" />
+        </receiver>
+        <receiver
             android:name=".GymDaysWidget"
             android:exported="false">
             <intent-filter>

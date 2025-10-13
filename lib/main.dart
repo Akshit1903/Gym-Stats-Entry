@@ -30,7 +30,7 @@ Future<void> initWorkManager() async {
   await Workmanager().registerPeriodicTask(
     "gymWidgetTask",
     "updateGymDays",
-    frequency: const Duration(hours: 2),
+    frequency: const Duration(minutes: 16),
     initialDelay: const Duration(minutes: 1),
   );
 
@@ -68,12 +68,17 @@ class AppWrapper extends StatefulWidget {
 }
 
 class _AppWrapperState extends State<AppWrapper> {
+  late AuthProvider _authProvider;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _authProvider = Provider.of<AuthProvider>(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final AuthProvider authProvider = Provider.of<AuthProvider>(context);
-
     return FutureBuilder(
-      future: authProvider.isSignedIn(),
+      future: _authProvider.isSignedIn(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

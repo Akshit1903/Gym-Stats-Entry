@@ -264,8 +264,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       setState(() {
         _isSubmitting = false;
       });
-    } else {
-      _isSubmitting = false;
     }
 
     // Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);

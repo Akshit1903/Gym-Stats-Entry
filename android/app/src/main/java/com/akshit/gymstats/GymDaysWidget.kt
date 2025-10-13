@@ -26,7 +26,6 @@ class GymDaysWidget : AppWidgetProvider() {
                 val color = getTextColor(noOfGymDays)
                 setTextColor(R.id.no_of_gym_days, color)
             }
-//            updateAppWidget(context, appWidgetManager, appWidgetId)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
 
@@ -54,18 +53,4 @@ class GymDaysWidget : AppWidgetProvider() {
         }
     }
 
-}
-
-internal fun updateAppWidget(
-    context: Context,
-    appWidgetManager: AppWidgetManager,
-    appWidgetId: Int
-) {
-    val widgetText = context.getString(R.string.appwidget_text)
-    // Construct the RemoteViews object
-    val views = RemoteViews(context.packageName, R.layout.gym_days_widget)
-    views.setTextViewText(R.id.no_of_gym_days, widgetText)
-
-    // Instruct the widget manager to update the widget
-    appWidgetManager.updateAppWidget(appWidgetId, views)
 }

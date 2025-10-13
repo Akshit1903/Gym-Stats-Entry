@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:intl/intl.dart';
 
 class GraphsPage extends StatefulWidget {
@@ -258,7 +259,7 @@ class _GraphsPageState extends State<GraphsPage> {
       return const SizedBox.shrink();
     }
 
-    return Card(
+    Widget chartCard = Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -425,5 +426,7 @@ class _GraphsPageState extends State<GraphsPage> {
         ),
       ),
     );
+    Utils.updateGraphImageHomeWidget(title, chartCard);
+    return chartCard;
   }
 }

@@ -37,6 +37,8 @@ class Utils {
     return '${Constants.months[date.month - 1]} ${date.day}';
   }
 
+  // Home Widget related methods
+
   static Future<void> updateNoOfGymDaysHomeWidget(String noOfGymDays) async {
     await HomeWidget.saveWidgetData<String>('no_of_gym_days', noOfGymDays);
     await HomeWidget.saveWidgetData<String>(
@@ -44,5 +46,37 @@ class Utils {
       DateTime.now().toString(),
     );
     await HomeWidget.updateWidget(androidName: "GymDaysWidget");
+  }
+
+  static Future<void> updateGraphImageHomeWidget(
+    String title,
+    Widget chartCard,
+  ) async {
+    String imagePath = await HomeWidget.renderFlutterWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(600, 400),
+            devicePixelRatio: 3.0,
+            platformBrightness: Brightness.dark, // helps some widgets
+          ),
+          child: Theme(
+            data: ThemeData.dark().copyWith(
+              scaffoldBackgroundColor: Colors.black,
+              cardColor: Colors.black,
+              canvasColor: Colors.black,
+              colorScheme: const ColorScheme.dark(),
+            ),
+            child: Material(color: Colors.black, child: chartCard),
+          ),
+        ),
+      ),
+      key: title,
+      logicalSize: const Size(600, 400),
+      pixelRatio: 6 / 2,
+    );
+    await HomeWidget.saveWidgetData<String>(title, imagePath);
+    await HomeWidget.updateWidget(name: 'BodyWeight');
   }
 }
