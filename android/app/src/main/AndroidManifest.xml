@@ -21,6 +21,26 @@
         android:icon="@mipmap/launcher_icon"
         android:label="Gym Stats Entry">
         <receiver
+            android:name=".GraphWidgetImage"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/graph_widget_image_info" />
+        </receiver>
+
+        <activity
+            android:name=".GraphWidgetImageConfigureActivity"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
             android:name=".BodyWeight"
             android:exported="false">
             <intent-filter>

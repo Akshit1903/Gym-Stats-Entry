@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
-import 'package:home_widget/home_widget.dart';
 import '../providers/auth_provider.dart';
 import '../settings/settings_page.dart';
 import '../samsung_health_service.dart';
 import '../graphs_page.dart';
-import 'WorkoutType.dart';
+import 'workout_type.dart';
 
 class WorkoutFormPage extends StatefulWidget {
   const WorkoutFormPage({super.key});
@@ -266,7 +265,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       });
     }
 
-    // Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
+    Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
   }
 
   void _resetForm() {
@@ -382,25 +381,25 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                     ),
                   ],
                 ),
-                FutureBuilder(
-                  future: HomeWidget.getWidgetData<String>(
-                    'no_of_gym_days_time',
-                  ),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data != null) {
-                      DateTime lastUpdated = DateTime.parse(
-                        snapshot.data!,
-                      ).toLocal();
-                      return Text(
-                        'Last updated: ${lastUpdated.hour}:${lastUpdated.minute}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                // FutureBuilder(
+                //   future: HomeWidget.getWidgetData<String>(
+                //     'no_of_gym_days_time',
+                //   ),
+                //   builder: (context, snapshot) {
+                //     if (snapshot.hasData && snapshot.data != null) {
+                //       DateTime lastUpdated = DateTime.parse(
+                //         snapshot.data!,
+                //       ).toLocal();
+                //       return Text(
+                //         'Last updated: ${lastUpdated.hour}:${lastUpdated.minute}',
+                //         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                //           color: scheme.onSurfaceVariant,
+                //         ),
+                //       );
+                //     }
+                //     return const SizedBox.shrink();
+                //   },
+                // ),
                 const SizedBox(height: 32),
 
                 // Date Field

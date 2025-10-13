@@ -3,4 +3,7 @@
     <string name="appwidget_text">2</string>
     <string name="add_widget">Gym Days</string>
     <string name="app_widget_description">Displays the number of days you went to gym in the last 7 days</string>
+    <string name="graph_widget_image_description">Generic Graph Widget Image</string>
+    <string name="body_wight_description">Shows body weight</string>
+    <string name="configure">Configure</string>
 </resources>

@@ -3,7 +3,11 @@ package com.akshit.gymstats
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetPlugin
+import java.io.File
 
 /**
  * Implementation of App Widget functionality.
@@ -17,7 +21,24 @@ class GraphWidgetImage : AppWidgetProvider() {
     ) {
         // There may be multiple widgets active, so update all of them
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+            val widgetData = HomeWidgetPlugin.getData(context)
+            val views = RemoteViews(context.packageName, R.layout.body_weight).apply {
+                val title = widgetData.getString("title", "Default title")
+                val imageName = widgetData.getString(title, null)
+                if(imageName == null){
+                    println("image name is null!")
+                    return
+                }
+                val imageFile = File(imageName)
+                val imageExists = imageFile.exists()
+                if (imageExists) {
+                    val myBitmap: Bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+                    setImageViewBitmap(R.id.widget_image, myBitmap)
+                } else {
+                    println("image not found!, looked @: ${imageName}")
+                }
+            }
+            appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
 
@@ -35,18 +56,4 @@ class GraphWidgetImage : AppWidgetProvider() {
     override fun onDisabled(context: Context) {
         // Enter relevant functionality for when the last widget is disabled
     }
-}
-
-internal fun updateAppWidget(
-    context: Context,
-    appWidgetManager: AppWidgetManager,
-    appWidgetId: Int
-) {
-    val widgetText = loadTitlePref(context, appWidgetId)
-    // Construct the RemoteViews object
-    val views = RemoteViews(context.packageName, R.layout.graph_widget_image)
-    views.setTextViewText(R.id.appwidget_text, widgetText)
-
-    // Instruct the widget manager to update the widget
-    appWidgetManager.updateAppWidget(appWidgetId, views)
 }

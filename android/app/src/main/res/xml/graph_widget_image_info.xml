@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.akshit.gymstats.GraphWidgetImageConfigureActivity"
-    android:description="@string/app_widget_description"
+    android:description="@string/graph_widget_image_description"
     android:initialKeyguardLayout="@layout/graph_widget_image"
     android:initialLayout="@layout/graph_widget_image"
     android:minWidth="250dp"
