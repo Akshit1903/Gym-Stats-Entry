@@ -1,6 +1,7 @@
 class Constants {
   Constants._();
 
+  static const packageName = "com.akshit.gymstats";
   static const months = [
     'January',
     'February',

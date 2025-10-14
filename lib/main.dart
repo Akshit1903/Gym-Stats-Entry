@@ -80,6 +80,7 @@ class _AppWrapperState extends State<AppWrapper> {
     return FutureBuilder(
       future: _authProvider.isSignedIn(),
       builder: (context, snapshot) {
+        // return BodyCompositionPage();
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),

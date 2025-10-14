@@ -34,7 +34,7 @@ android {
         applicationId = "com.akshit.gymstats"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -67,6 +67,15 @@ flutter {
     source = "../.."
 }
 
+repositories {
+    flatDir {
+        dirs("libs")
+    }
+}
+
+
 dependencies {
     implementation("com.google.android.gms:play-services-auth:20.4.1")
+    implementation(":samsung-health-data-api-1.0.0@aar")
+    implementation("com.google.code.gson:gson:2.10.1")
 }

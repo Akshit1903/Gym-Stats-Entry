@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gym_stats_entry_client/services/samsung_health.dart';
 import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
 import '../providers/auth_provider.dart';
 import '../settings/settings_page.dart';
-import '../samsung_health_service.dart';
 import '../graphs_page.dart';
 import 'workout_type.dart';
 
@@ -19,6 +19,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _dateController = TextEditingController();
   bool _isSubmitting = false;
+  bool _isFetchingFromSamsungHealth = false;
   late AppsScriptsClient _appsScriptsClient;
   String _noOfGymDays = "-";
   WorkoutType? _selectedWorkout;
@@ -42,6 +43,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _dateController.text = Utils.formatDate(DateTime.now());
     _appsScriptsClient = AppsScriptsClient.instance;
     _handleNoOfGymDaysHomeWidgetUpdate();
+    _fetchAndSetDataFromSamsungHealth();
   }
 
   @override
@@ -74,129 +76,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     // Refresh the page if settings were updated
     if (result == true) {
       setState(() {});
-    }
-  }
-
-  Future<void> _fetchSamsungHealthData() async {
-    try {
-      final samsungHealthService = SamsungHealthService();
-
-      // Check if Samsung Health is available
-      final isAvailable = await samsungHealthService.isAvailable();
-      if (!isAvailable) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Samsung Health is not available on this device'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Request permissions
-      final hasPermissions = await samsungHealthService.requestPermissions();
-      if (!hasPermissions) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Permission denied for Samsung Health data'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Get the selected date
-      final selectedDate = Utils.parseFormattedDate(_dateController.text);
-
-      // Check if data exists for the selected date
-      final hasData = await samsungHealthService.hasDataForDate(selectedDate);
-      if (!hasData) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No Samsung Health data available for the selected date',
-              ),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Show loading indicator
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Fetching data from Samsung Health...'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      // Fetch data from Samsung Health
-      final healthData = await samsungHealthService.fetchDataForDate(
-        selectedDate,
-      );
-
-      if (healthData != null && mounted) {
-        setState(() {
-          if (healthData.bodyweight != null) {
-            _bodyweightController.text = healthData.bodyweight!.toString();
-          }
-          if (healthData.skeletalMass != null) {
-            _skeletalMassController.text = healthData.skeletalMass!.toString();
-          }
-          if (healthData.fatMass != null) {
-            _fatMassController.text = healthData.fatMass!.toString();
-          }
-          if (healthData.bodyWater != null) {
-            _bodyWaterController.text = healthData.bodyWater!.toString();
-          }
-          if (healthData.fatPercentage != null) {
-            _fatPercentageController.text = healthData.fatPercentage!
-                .toString();
-          }
-          if (healthData.bmr != null) {
-            _bmrController.text = healthData.bmr!.toString();
-          }
-          if (healthData.energy != null) {
-            _energyController.text = healthData.energy!.toString();
-          }
-          if (healthData.notes != null) {
-            _notesController.text = healthData.notes!;
-          }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data imported from Samsung Health!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to fetch data from Samsung Health'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -268,6 +147,65 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
   }
 
+  Future<void> _fetchAndSetDataFromSamsungHealth() async {
+    String? parseToTwoDecimals(String? value) {
+      if (value == null) return null;
+      final parsed = double.tryParse(value);
+      if (parsed == null) return null;
+      return double.parse(parsed.toStringAsFixed(2)).toString();
+    }
+
+    setState(() {
+      _isFetchingFromSamsungHealth = true;
+    });
+    final Map<String, String>? data =
+        await SamsungHealth.getBodyCompositionAndExerciseData();
+
+    if (data != null && mounted) {
+      String? basalMetabolicRate = data['basal_metabolic_rate'];
+      String? bodyFatPercentage = parseToTwoDecimals(data['body_fat']);
+      String? bodyFatMass = parseToTwoDecimals(data['body_fat_mass']);
+      // String? fatFreeMass = data['fat_free_mass'];
+      String? skeletalMuscleMass = parseToTwoDecimals(
+        data['skeletal_muscle_mass'],
+      );
+      String? totalBodyWater = parseToTwoDecimals(data['total_body_water']);
+      String? weight = data['weight'];
+      String? calories = data['calories'];
+      // String? duration = data['duration'];
+      String? maxHeartRate = data['maxHeartRate'];
+      String? meanHeartRate = data['meanHeartRate'];
+
+      setState(() {
+        _bodyweightController.text = weight ?? '';
+        _skeletalMassController.text = skeletalMuscleMass ?? '';
+        _fatMassController.text = bodyFatMass ?? '';
+        _bodyWaterController.text = totalBodyWater ?? '';
+        _fatPercentageController.text = bodyFatPercentage ?? '';
+        _bmrController.text = basalMetabolicRate ?? '';
+        _energyController.text = calories ?? '';
+        _maxHeartRateController.text = maxHeartRate ?? '';
+        _avgHeartRateController.text = meanHeartRate ?? '';
+      });
+      Utils.showSnackBar(
+        "Fetched from Samsung Health successfully",
+        Colors.green,
+        context,
+      );
+    } else {
+      if (mounted) {
+        Utils.showSnackBar(
+          "Could not fetch data from Samsung Health",
+          Colors.red,
+          context,
+        );
+      }
+    }
+    setState(() {
+      _isFetchingFromSamsungHealth = false;
+    });
+  }
+
   void _resetForm() {
     _formKey.currentState!.reset();
     _dateController.text = Utils.formatDate(DateTime.now());
@@ -313,7 +251,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           IconButton(
             onPressed: _isSubmitting
                 ? null
-                : _handleNoOfGymDaysHomeWidgetUpdate,
+                : () {
+                    _handleNoOfGymDaysHomeWidgetUpdate();
+                    _fetchAndSetDataFromSamsungHealth();
+                  },
             icon: _isSubmitting
                 ? SizedBox(
                     height: 15,
@@ -404,27 +345,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
 
                 // Date Field
                 _buildDateField(),
-                const SizedBox(height: 24),
 
-                // Samsung Health Integration Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: _fetchSamsungHealthData,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: scheme.primary),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: Icon(Icons.health_and_safety, color: scheme.primary),
-                    label: Text(
-                      'Import from Samsung Health',
-                      style: TextStyle(color: scheme.primary),
-                    ),
-                  ),
-                ),
+                if (_isFetchingFromSamsungHealth) LinearProgressIndicator(),
                 const SizedBox(height: 24),
 
                 // Body Measurements Section
