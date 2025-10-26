@@ -44,6 +44,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _appsScriptsClient = AppsScriptsClient.instance;
     _handleNoOfGymDaysHomeWidgetUpdate();
     _fetchAndSetDataFromSamsungHealth();
+    _setNextWorkoutType();
   }
 
   @override
@@ -187,11 +188,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         _maxHeartRateController.text = maxHeartRate ?? '';
         _avgHeartRateController.text = meanHeartRate ?? '';
       });
-      Utils.showSnackBar(
-        "Fetched from Samsung Health successfully",
-        Colors.green,
-        context,
-      );
     } else {
       if (mounted) {
         Utils.showSnackBar(
@@ -204,6 +200,20 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     setState(() {
       _isFetchingFromSamsungHealth = false;
     });
+  }
+
+  Future<void> _setNextWorkoutType() async {
+    String nextWorkoutTypeResponse = await _appsScriptsClient
+        .getNextWorkoutType(context);
+    WorkoutType? nextWorkoutType = WorkoutType.values.firstWhere(
+      (type) => type.displayName == nextWorkoutTypeResponse,
+      orElse: () => _selectedWorkout ?? WorkoutType.active,
+    );
+    if (mounted) {
+      setState(() {
+        _selectedWorkout = nextWorkoutType;
+      });
+    }
   }
 
   void _resetForm() {

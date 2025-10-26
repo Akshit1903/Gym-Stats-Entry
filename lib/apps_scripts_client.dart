@@ -78,7 +78,7 @@ class AppsScriptsClient {
       "getNumberOfDaysIWentToGymInLast7Days",
       [],
       context,
-      "No. of gym days fetched successfully.",
+      null,
       "Failed to fetch no. of gym days.",
     );
     return noOfGymDays ?? "-";
@@ -103,8 +103,19 @@ class AppsScriptsClient {
       "addBodyCompositionEntry",
       [workoutData],
       context,
-      'Workout entry added successfully!',
+      null,
       "Failed to add workout entry.",
     );
+  }
+
+  Future<String> getNextWorkoutType([BuildContext? context]) async {
+    return await _callAppsScript(
+          "getNextWorkoutType",
+          [],
+          context,
+          null,
+          "Failed to fetch next workout type",
+        ) ??
+        "";
   }
 }
