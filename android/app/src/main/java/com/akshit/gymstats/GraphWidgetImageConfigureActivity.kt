@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -77,10 +78,15 @@ class GraphWidgetImageConfigureActivity : Activity() {
 
         saveButton.setOnClickListener {
             val title = binding.titleSpinner.selectedItem.toString()
+            val context = this@GraphWidgetImageConfigureActivity
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+
 
             // Save to HomeWidget preferences
             val prefs = HomeWidgetPlugin.getData(this) // <- SharedPreferences
-            prefs.edit { putString("title", title) }
+            Log.d("GraphWidgetImage", "appWidgetId: $appWidgetId")
+            prefs.edit { putString("${appWidgetId}_title", title) }
+            GraphWidgetImage .updateAppWidget(context, appWidgetManager, appWidgetId)
 
             // Tell AppWidgetManager to update this widget
             val resultValue = Intent()
