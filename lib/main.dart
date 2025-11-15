@@ -18,7 +18,9 @@ void callbackDispatcher() {
         AppsScriptsClient.instance.setUser(user);
         final appsScriptsClient = AppsScriptsClient.instance;
         String noOfGymDays = await appsScriptsClient.getNumberOfGymDays();
-        await Utils.updateNoOfGymDaysHomeWidget(noOfGymDays);
+        if (int.tryParse(noOfGymDays) != null) {
+          await Utils.updateNoOfGymDaysHomeWidget(noOfGymDays);
+        }
     }
     return true;
   });
@@ -26,7 +28,6 @@ void callbackDispatcher() {
 
 Future<void> initWorkManager() async {
   await Workmanager().initialize(callbackDispatcher);
-  // 🔁 Regular periodic task (runs every 2 hours)
   await Workmanager().registerPeriodicTask(
     "gymWidgetTask",
     "updateGymDays",

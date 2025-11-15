@@ -149,11 +149,11 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _fetchAndSetDataFromSamsungHealth() async {
-    String? parseToTwoDecimals(String? value) {
+    String? parseToTwoDecimals(String? value, [int fractionDigits = 2]) {
       if (value == null) return null;
       final parsed = double.tryParse(value);
       if (parsed == null) return null;
-      return double.parse(parsed.toStringAsFixed(2)).toString();
+      return double.parse(parsed.toStringAsFixed(fractionDigits)).toString();
     }
 
     setState(() {
@@ -174,8 +174,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       String? weight = data['weight'];
       String? calories = data['calories'];
       // String? duration = data['duration'];
-      String? maxHeartRate = data['maxHeartRate'];
-      String? meanHeartRate = data['meanHeartRate'];
+      String? maxHeartRate = parseToTwoDecimals(data['maxHeartRate'], 0);
+      String? meanHeartRate = parseToTwoDecimals(data['meanHeartRate'], 0);
 
       setState(() {
         _bodyweightController.text = weight ?? '';
@@ -264,6 +264,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 : () {
                     _handleNoOfGymDaysHomeWidgetUpdate();
                     _fetchAndSetDataFromSamsungHealth();
+                    _setNextWorkoutType();
                   },
             icon: _isSubmitting
                 ? SizedBox(
