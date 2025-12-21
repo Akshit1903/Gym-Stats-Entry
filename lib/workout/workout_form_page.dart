@@ -149,10 +149,13 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _fetchAndSetDataFromSamsungHealth() async {
-    String? parseToTwoDecimals(String? value, [int fractionDigits = 2]) {
+    String? parseNumber(String? value, [int fractionDigits = 2]) {
       if (value == null) return null;
       final parsed = double.tryParse(value);
       if (parsed == null) return null;
+      if (fractionDigits == 0) {
+        return parsed.toInt().toString();
+      }
       return double.parse(parsed.toStringAsFixed(fractionDigits)).toString();
     }
 
@@ -164,18 +167,16 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
 
     if (data != null && mounted) {
       String? basalMetabolicRate = data['basal_metabolic_rate'];
-      String? bodyFatPercentage = parseToTwoDecimals(data['body_fat']);
-      String? bodyFatMass = parseToTwoDecimals(data['body_fat_mass']);
+      String? bodyFatPercentage = parseNumber(data['body_fat']);
+      String? bodyFatMass = parseNumber(data['body_fat_mass']);
       // String? fatFreeMass = data['fat_free_mass'];
-      String? skeletalMuscleMass = parseToTwoDecimals(
-        data['skeletal_muscle_mass'],
-      );
-      String? totalBodyWater = parseToTwoDecimals(data['total_body_water']);
+      String? skeletalMuscleMass = parseNumber(data['skeletal_muscle_mass']);
+      String? totalBodyWater = parseNumber(data['total_body_water']);
       String? weight = data['weight'];
-      String? calories = data['calories'];
+      String? calories = parseNumber(data['calories'], 0);
       // String? duration = data['duration'];
-      String? maxHeartRate = parseToTwoDecimals(data['maxHeartRate'], 0);
-      String? meanHeartRate = parseToTwoDecimals(data['meanHeartRate'], 0);
+      String? maxHeartRate = parseNumber(data['maxHeartRate'], 0);
+      String? meanHeartRate = parseNumber(data['meanHeartRate'], 0);
 
       setState(() {
         _bodyweightController.text = weight ?? '';
