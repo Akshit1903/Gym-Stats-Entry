@@ -1,33 +1,61 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:gym_stats_entry_client/apps_scripts_client.dart';
+import 'package:gym_stats_entry_client/utils/utils.dart';
 
 class SettingsService {
-  static const String _apiUrlKey = 'api_url';
+  SettingsService._();
 
-  // Get the stored API URL
-  Future<String> getApiUrl() async {
+  static Future<String> getAppsScriptURL() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_apiUrlKey) ?? '';
+      String appsScriptURL = await Utils.getPrefsStringValue(
+        Utils.APPS_SCRIPT_URL_KEY,
+      );
+      if (appsScriptURL.isNotEmpty) {
+        return appsScriptURL;
+      }
+      setAppsScriptURL();
+      return await Utils.getPrefsStringValue(Utils.APPS_SCRIPT_URL_KEY);
     } catch (e) {
-      throw Exception('API URL not configured. Please set it in Settings.');
+      throw Exception('Failed to get Apps Script URL: ${e.toString()}');
     }
   }
 
-  // Set the API URL
-  Future<bool> setApiUrl(String url) async {
+  static Future<bool> setAppsScriptURL() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return await prefs.setString(_apiUrlKey, url);
+      final stateConfigURL = await getStateConfigURL();
+      if (stateConfigURL.isEmpty) {
+        return false;
+      }
+      final appsScriptURL = await AppsScriptsClient.instance
+          .getAppsScriptClientUrl(null);
+      return await Utils.setPrefsStringValue(
+        Utils.APPS_SCRIPT_URL_KEY,
+        appsScriptURL ?? "",
+      );
     } catch (e) {
       return false;
     }
   }
 
-  // Clear the stored API URL
-  Future<bool> clearApiUrl() async {
+  // Get the stored Config State URL
+  static Future<String> getStateConfigURL() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return await prefs.remove(_apiUrlKey);
+      return await Utils.getPrefsStringValue(Utils.STATE_CONFIG_URL_KEY);
+    } catch (e) {
+      throw Exception(
+        'State Config URL not configured. Please set it in Settings.',
+      );
+    }
+  }
+
+  // Set the State Config URL
+  static Future<bool> setStateConfigURL(String url) async {
+    try {
+      bool stateConfigURLSetStatus = await Utils.setPrefsStringValue(
+        Utils.STATE_CONFIG_URL_KEY,
+        url,
+      );
+      setAppsScriptURL();
+      return stateConfigURLSetStatus;
     } catch (e) {
       return false;
     }

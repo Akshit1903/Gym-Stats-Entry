@@ -8,9 +8,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 class AppsScriptsClient {
   static final AppsScriptsClient instance = AppsScriptsClient._();
-  AppsScriptsClient._();
-
   GoogleSignInAccount? _user;
+
+  AppsScriptsClient._() {
+    SettingsService.setAppsScriptURL();
+  }
 
   Future<String?> _getAccessToken(
     GoogleSignInAccount? googleSignInAccount,
@@ -26,6 +28,50 @@ class AppsScriptsClient {
     _user = user;
   }
 
+  Future<String?> _getStateConfigVar(
+    String functionName,
+    String stateVarId, [
+    BuildContext? context,
+    String errorMessagePrefix = "",
+  ]) async {
+    try {
+      String stateConfigUrl = await SettingsService.getStateConfigURL();
+      final Uri uri = Uri.parse(stateConfigUrl);
+
+      var headers = {
+        'Authorization': 'Bearer ${await _getAccessToken(_user)}',
+        'Content-Type': 'application/json',
+      };
+      var body = json.encode({
+        "function": functionName,
+        "parameters": [stateVarId],
+      });
+
+      final response = await http.post(uri, headers: headers, body: body);
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Status: ${response.statusCode.toString()}  Message: ${(response.reasonPhrase ?? "")}',
+        );
+      }
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse["response"]["result"];
+    } catch (e) {
+      if (context != null && context.mounted) {
+        Utils.showSnackBar("$errorMessagePrefix $e", Colors.red, context);
+      }
+      return null;
+    }
+  }
+
+  Future<String?> getAppsScriptClientUrl(BuildContext? context) async {
+    return _getStateConfigVar(
+      "getAppsScriptClientUrl",
+      Utils.APP_NAME,
+      context,
+      "Error getting apps script URL:",
+    );
+  }
+
   Future<String?> _callAppsScript(
     final String functionName,
     final List<dynamic> parameters,
@@ -34,8 +80,8 @@ class AppsScriptsClient {
     String? errorMessage,
   ) async {
     try {
-      final apiUrl = await SettingsService().getApiUrl();
-      final Uri uri = Uri.parse(apiUrl);
+      final appsScriptURL = await SettingsService.getAppsScriptURL();
+      final Uri uri = Uri.parse(appsScriptURL);
       final authorization = await _getAccessToken(_user);
       var headers = {
         if (authorization != null) 'Authorization': "Bearer $authorization",

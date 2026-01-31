@@ -75,7 +75,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       MaterialPageRoute(builder: (context) => const SettingsPage()),
     );
     // Refresh the page if settings were updated
-    if (result == true) {
+    if (mounted && result == true) {
       setState(() {});
     }
   }
@@ -198,9 +198,11 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         );
       }
     }
-    setState(() {
-      _isFetchingFromSamsungHealth = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isFetchingFromSamsungHealth = false;
+      });
+    }
   }
 
   Future<void> _setNextWorkoutType() async {

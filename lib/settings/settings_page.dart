@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
+import 'package:gym_stats_entry_client/settings/settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -9,7 +10,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _apiUrlController = TextEditingController();
+  final _stateConfigUrlController = TextEditingController();
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -21,15 +22,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    _apiUrlController.dispose();
+    _stateConfigUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _loadSettings() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final apiUrl = prefs.getString('api_url') ?? '';
-      _apiUrlController.text = apiUrl;
+      final stateConfigUrl = await SettingsService.getStateConfigURL();
+      _stateConfigUrlController.text = stateConfigUrl;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -49,10 +49,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveSettings() async {
-    if (_apiUrlController.text.trim().isEmpty) {
+    if (_stateConfigUrlController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('API URL cannot be empty'),
+          content: Text('State Config URL cannot be empty'),
           backgroundColor: Colors.red,
         ),
       );
@@ -64,9 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('api_url', _apiUrlController.text.trim());
-
+      SettingsService.setStateConfigURL(_stateConfigUrlController.text.trim());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -140,16 +138,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 32),
 
                     // API Configuration Section
-                    _buildSectionHeader('API Configuration'),
+                    _buildSectionHeader('State Config'),
                     const SizedBox(height: 16),
 
                     _buildTextField(
-                      controller: _apiUrlController,
-                      label: 'API Endpoint URL',
+                      controller: _stateConfigUrlController,
+                      label: 'State Config URL',
                       keyboardType: TextInputType.url,
                       validator: (value) {
                         if (value?.isEmpty == true) {
-                          return 'API URL is required';
+                          return 'State Config URL is required';
                         }
                         final uri = Uri.tryParse(value ?? '');
                         if (uri == null || !uri.hasScheme) {
@@ -160,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter the full URL of your backend API endpoint (e.g., https://api.example.com/workouts)',
+                      'State Config URL to fetch apps script URL and more',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -193,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               )
                             : const Text(
-                                'Save Settings',
+                                'Save',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -202,33 +200,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // Info Section
-                    _buildSectionHeader('Information'),
-                    const SizedBox(height: 16),
-
-                    _buildInfoCard(
-                      icon: Icons.api,
-                      title: 'API Endpoint',
-                      description:
-                          'This is the URL where your workout data will be sent. Make sure your backend service is running and accessible.',
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildInfoCard(
-                      icon: Icons.security,
-                      title: 'Security',
-                      description:
-                          'Your API URL is stored locally on your device using secure storage. It is not shared with any third parties.',
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildInfoCard(
-                      icon: Icons.help,
-                      title: 'Need Help?',
-                      description:
-                          'If you\'re unsure about the API URL, contact your system administrator or check your backend service documentation.',
-                    ),
                   ],
                 ),
               ),
@@ -254,6 +225,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
+    Future<void> pasteFromClipboard() async {
+      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+      if (clipboardData != null) {
+        controller.text = clipboardData.text ?? "";
+      }
+    }
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -277,56 +255,11 @@ class _SettingsPageState extends State<SettingsPage> {
           vertical: 16,
         ),
         suffixIcon: IconButton(
-          icon: Icon(Icons.clear, color: scheme.onSurfaceVariant),
-          onPressed: () {
-            controller.clear();
-          },
+          onPressed: () => setState(() {
+            pasteFromClipboard();
+          }),
+          icon: Icon(Icons.paste),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withOpacity(0.3)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: scheme.primary, size: 24),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,9 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:gym_stats_entry_client/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {
   Utils._();
+
+  static const APP_NAME = 'GYM_STATS_ENTRY';
+
+  static const STATE_CONFIG_URL_KEY = 'state_config_url';
+  static const APPS_SCRIPT_URL_KEY = 'apps_script_url';
+  static SharedPreferences? _prefs;
+
+  static Future<String> getPrefsStringValue(String key) async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!.getString(key) ?? '';
+  }
+
+  static Future<bool> setPrefsStringValue(String key, String value) async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return await _prefs!.setString(key, value);
+  }
 
   static void showSnackBar(
     String message,
