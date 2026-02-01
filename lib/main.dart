@@ -28,11 +28,19 @@ void callbackDispatcher() {
 
 Future<void> initWorkManager() async {
   await Workmanager().initialize(callbackDispatcher);
+  final now = DateTime.now();
+  final next1201 = DateTime(now.year, now.month, now.day, 0, 1).add(
+    now.isBefore(DateTime(now.year, now.month, now.day, 0, 1))
+        ? Duration.zero
+        : const Duration(days: 1),
+  );
+  Duration initialDelay = next1201.difference(now);
   await Workmanager().registerPeriodicTask(
     "gymWidgetTask",
     "updateGymDays",
-    frequency: const Duration(minutes: 16),
-    initialDelay: const Duration(minutes: 1),
+    frequency: const Duration(days: 1),
+    initialDelay: initialDelay,
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
   );
 
   // ⚡ Immediate one-off debug task (runs after 10 seconds)

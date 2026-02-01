@@ -336,25 +336,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                     ),
                   ],
                 ),
-                // FutureBuilder(
-                //   future: HomeWidget.getWidgetData<String>(
-                //     'no_of_gym_days_time',
-                //   ),
-                //   builder: (context, snapshot) {
-                //     if (snapshot.hasData && snapshot.data != null) {
-                //       DateTime lastUpdated = DateTime.parse(
-                //         snapshot.data!,
-                //       ).toLocal();
-                //       return Text(
-                //         'Last updated: ${lastUpdated.hour}:${lastUpdated.minute}',
-                //         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                //           color: scheme.onSurfaceVariant,
-                //         ),
-                //       );
-                //     }
-                //     return const SizedBox.shrink();
-                //   },
-                // ),
                 const SizedBox(height: 32),
 
                 // Date Field
