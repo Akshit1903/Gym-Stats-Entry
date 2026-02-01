@@ -141,12 +141,12 @@ class AppsScriptsClient {
         "";
   }
 
-  Future<void> submitBodyCompositionEntry(
+  Future<void> submitWorkoutLog(
     Map<String, dynamic> workoutData, [
     BuildContext? context,
   ]) async {
     await _callAppsScript(
-      "addBodyCompositionEntry",
+      "addWorkoutLog",
       [workoutData],
       context,
       null,

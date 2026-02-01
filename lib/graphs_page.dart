@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -12,7 +14,7 @@ class GraphsPage extends StatefulWidget {
 }
 
 class _GraphsPageState extends State<GraphsPage> {
-  List<List<dynamic>> _workoutData = [];
+  List<List<String>> _workoutHistory = [];
   bool _isLoading = true;
   String? _error;
   late AppsScriptsClient _appsScriptsClient;
@@ -31,13 +33,19 @@ class _GraphsPageState extends State<GraphsPage> {
         _error = null;
       });
 
-      final workoutData = await _appsScriptsClient.getWorkoutData(context);
+      final workoutHistoryResponse = await _appsScriptsClient.getWorkoutData(
+        context,
+      );
 
       setState(() {
-        List<String> inter = workoutData.toString().split("@#@");
-        _workoutData = List<List<dynamic>>.from(
-          inter.map((e) => e.split("|&")),
-        );
+        List<dynamic> inter = JsonDecoder().convert(
+          workoutHistoryResponse,
+        )['workoutHistory'];
+        _workoutHistory = inter
+            .map<List<String>>(
+              (row) => row.map<String>((item) => item.toString()).toList(),
+            )
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -52,7 +60,7 @@ class _GraphsPageState extends State<GraphsPage> {
 
   List<FlSpot> _createDataPoints(int dataIndex, String label) {
     final spots = <FlSpot>[];
-    final currentWorkoutData = _workoutData
+    final currentWorkoutData = _workoutHistory
         .where(
           (row) =>
               row[0] != null &&
@@ -79,7 +87,7 @@ class _GraphsPageState extends State<GraphsPage> {
   }
 
   List<String> _getDateLabels() {
-    return _workoutData.map((row) {
+    return _workoutHistory.map((row) {
       if (row.isNotEmpty && row[0] != null) {
         return row[0].toString();
       }
@@ -110,7 +118,7 @@ class _GraphsPageState extends State<GraphsPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? _buildErrorWidget()
-          : _workoutData.isEmpty
+          : _workoutHistory.isEmpty
           ? _buildEmptyWidget()
           : _buildCharts(),
     );
@@ -311,9 +319,9 @@ class _GraphsPageState extends State<GraphsPage> {
                         reservedSize: 30,
                         interval: 1,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          int index = (_workoutData.length == 1)
+                          int index = (_workoutHistory.length == 1)
                               ? 0
-                              : (value * (_workoutData.length - 1)).round();
+                              : (value * (_workoutHistory.length - 1)).round();
                           if (index < _getDateLabels().length) {
                             final date = _getDateLabels()[value.toInt()];
                             String formattedDate = "";

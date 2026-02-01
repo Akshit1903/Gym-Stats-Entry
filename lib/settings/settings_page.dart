@@ -11,8 +11,10 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final _stateConfigUrlController = TextEditingController();
+  String _appsScriptUrl = "";
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isRefreshingAppsScript = false;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadSettings() async {
     try {
       final stateConfigUrl = await SettingsService.getStateConfigURL();
+      _appsScriptUrl = await SettingsService.getAppsScriptURL();
       _stateConfigUrlController.text = stateConfigUrl;
     } catch (e) {
       if (mounted) {
@@ -95,6 +98,36 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _refreshAppsScriptUrl() async {
+    setState(() {
+      _isRefreshingAppsScript = true;
+    });
+    try {
+      await SettingsService.setAppsScriptURL();
+      final appsScriptUrl = await SettingsService.getAppsScriptURL();
+      if (mounted) {
+        setState(() {
+          _appsScriptUrl = appsScriptUrl;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh Apps Script URL: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshingAppsScript = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -138,7 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 32),
 
                     // API Configuration Section
-                    _buildSectionHeader('State Config'),
+                    _buildSectionHeader('State Config URL'),
                     const SizedBox(height: 16),
 
                     _buildTextField(
@@ -200,6 +233,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    _buildSectionHeader('Apps Script URL'),
+                    const SizedBox(height: 16),
+                    Text(
+                      _appsScriptUrl,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isRefreshingAppsScript
+                            ? null
+                            : _refreshAppsScriptUrl,
+                        label: const Text("Refresh"),
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ),
                   ],
                 ),
               ),

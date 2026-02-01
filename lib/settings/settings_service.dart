@@ -12,7 +12,7 @@ class SettingsService {
       if (appsScriptURL.isNotEmpty) {
         return appsScriptURL;
       }
-      setAppsScriptURL();
+      await setAppsScriptURL();
       return await Utils.getPrefsStringValue(Utils.APPS_SCRIPT_URL_KEY);
     } catch (e) {
       throw Exception('Failed to get Apps Script URL: ${e.toString()}');

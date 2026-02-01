@@ -86,39 +86,21 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     });
 
     final workoutData = {
-      'Date': _dateController.text,
-      'Bodyweight': _bodyweightController.text.isNotEmpty
-          ? double.tryParse(_bodyweightController.text)
-          : null,
-      'SkeletalMass': _skeletalMassController.text.isNotEmpty
-          ? double.tryParse(_skeletalMassController.text)
-          : null,
-      'FatMass': _fatMassController.text.isNotEmpty
-          ? double.tryParse(_fatMassController.text)
-          : null,
-      'BodyWater': _bodyWaterController.text.isNotEmpty
-          ? double.tryParse(_bodyWaterController.text)
-          : null,
-      'FatPercent': _fatPercentageController.text.isNotEmpty
-          ? double.tryParse(_fatPercentageController.text)
-          : null,
-      'BMR': _bmrController.text.isNotEmpty
-          ? double.tryParse(_bmrController.text)
-          : null,
+      'Date': Utils.parseFormattedDate(_dateController.text).toIso8601String(),
+      'Bodyweight': double.tryParse(_bodyweightController.text),
+      'SkeletalMass': double.tryParse(_skeletalMassController.text),
+      'FatMass': double.tryParse(_fatMassController.text),
+      'BodyWater': double.tryParse(_bodyWaterController.text),
+      'FatPercent': double.tryParse(_fatPercentageController.text),
+      'BMR': double.tryParse(_bmrController.text),
       'Workout': _selectedWorkout?.displayName,
-      'Energy': _energyController.text.isNotEmpty
-          ? int.tryParse(_energyController.text)
-          : null,
-      'AvgHeartRate': _avgHeartRateController.text.isNotEmpty
-          ? int.tryParse(_avgHeartRateController.text)
-          : null,
-      'MaxHeartRate': _maxHeartRateController.text.isNotEmpty
-          ? int.tryParse(_maxHeartRateController.text)
-          : null,
-      'Notes': _notesController.text.isNotEmpty ? _notesController.text : null,
+      'Energy': int.tryParse(_energyController.text),
+      'AvgHeartRate': int.tryParse(_avgHeartRateController.text),
+      'MaxHeartRate': int.tryParse(_maxHeartRateController.text),
+      'Notes': _notesController.text,
     };
 
-    await _appsScriptsClient.submitBodyCompositionEntry(workoutData, context);
+    await _appsScriptsClient.submitWorkoutLog(workoutData, context);
     _resetForm();
     _handleNoOfGymDaysHomeWidgetUpdate();
     if (mounted) {
