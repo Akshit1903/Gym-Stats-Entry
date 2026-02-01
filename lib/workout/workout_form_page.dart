@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym_stats_entry_client/services/samsung_health.dart';
+import 'package:gym_stats_entry_client/workout/workflow_type.dart';
 import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
@@ -24,6 +25,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   String _noOfGymDays = "-";
   WorkoutType? _selectedWorkout;
   late AuthProvider _authProvider;
+  WorkflowType _workflowType = WorkflowType.workoutLog;
 
   // Form field controllers
   final _bodyweightController = TextEditingController();
@@ -84,23 +86,39 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     setState(() {
       _isSubmitting = true;
     });
+    switch (_workflowType) {
+      case WorkflowType.workoutLog:
+        final workoutData = {
+          'Date': Utils.parseFormattedDate(
+            _dateController.text,
+          ).toIso8601String(),
+          'Bodyweight': double.tryParse(_bodyweightController.text),
+          'SkeletalMass': double.tryParse(_skeletalMassController.text),
+          'FatMass': double.tryParse(_fatMassController.text),
+          'BodyWater': double.tryParse(_bodyWaterController.text),
+          'FatPercent': double.tryParse(_fatPercentageController.text),
+          'BMR': double.tryParse(_bmrController.text),
+          'Workout': _selectedWorkout?.displayName,
+          'Energy': int.tryParse(_energyController.text),
+          'AvgHeartRate': int.tryParse(_avgHeartRateController.text),
+          'MaxHeartRate': int.tryParse(_maxHeartRateController.text),
+          'Notes': _notesController.text,
+        };
+        await _appsScriptsClient.submitWorkoutLog(workoutData, context);
+        break;
+      case WorkflowType.cutLog:
+        final cutData = {
+          'Date': Utils.parseFormattedDate(
+            _dateController.text,
+          ).toIso8601String(),
+          'Bodyweight': double.tryParse(_bodyweightController.text),
+          'SkeletalMass': double.tryParse(_skeletalMassController.text),
+          'FatMass': double.tryParse(_fatMassController.text),
+        };
+        await _appsScriptsClient.submitCutLog(cutData, context);
+        break;
+    }
 
-    final workoutData = {
-      'Date': Utils.parseFormattedDate(_dateController.text).toIso8601String(),
-      'Bodyweight': double.tryParse(_bodyweightController.text),
-      'SkeletalMass': double.tryParse(_skeletalMassController.text),
-      'FatMass': double.tryParse(_fatMassController.text),
-      'BodyWater': double.tryParse(_bodyWaterController.text),
-      'FatPercent': double.tryParse(_fatPercentageController.text),
-      'BMR': double.tryParse(_bmrController.text),
-      'Workout': _selectedWorkout?.displayName,
-      'Energy': int.tryParse(_energyController.text),
-      'AvgHeartRate': int.tryParse(_avgHeartRateController.text),
-      'MaxHeartRate': int.tryParse(_maxHeartRateController.text),
-      'Notes': _notesController.text,
-    };
-
-    await _appsScriptsClient.submitWorkoutLog(workoutData, context);
     _resetForm();
     _handleNoOfGymDaysHomeWidgetUpdate();
     if (mounted) {
@@ -320,6 +338,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 ),
                 const SizedBox(height: 32),
 
+                _buildWorkflowDropdown(),
+                const SizedBox(height: 24),
                 // Date Field
                 _buildDateField(),
 
@@ -394,46 +414,48 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 const SizedBox(height: 24),
 
                 // Workout Section
-                _buildSectionHeader('Workout Details'),
-                const SizedBox(height: 16),
+                if (_workflowType == WorkflowType.workoutLog) ...[
+                  _buildSectionHeader('Workout Details'),
+                  const SizedBox(height: 16),
 
-                _buildWorkoutDropdown(),
-                const SizedBox(height: 16),
+                  _buildWorkoutDropdown(),
+                  const SizedBox(height: 16),
 
-                _buildTextField(
-                  controller: _energyController,
-                  label: 'Energy (kcal)',
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
+                  _buildTextField(
+                    controller: _energyController,
+                    label: 'Energy (kcal)',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _avgHeartRateController,
-                        label: 'Avg. Heart Rate (bpm)',
-                        keyboardType: TextInputType.number,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          controller: _avgHeartRateController,
+                          label: 'Avg. Heart Rate (bpm)',
+                          keyboardType: TextInputType.number,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _maxHeartRateController,
-                        label: 'Max. Heart Rate (bpm)',
-                        keyboardType: TextInputType.number,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField(
+                          controller: _maxHeartRateController,
+                          label: 'Max. Heart Rate (bpm)',
+                          keyboardType: TextInputType.number,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
-                _buildTextField(
-                  controller: _notesController,
-                  label: 'Notes',
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 32),
+                  _buildTextField(
+                    controller: _notesController,
+                    label: 'Notes',
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 32),
+                ],
 
                 // Submit Button
                 SizedBox(
@@ -525,6 +547,51 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       onChanged: (WorkoutType? newValue) {
         setState(() {
           _selectedWorkout = newValue;
+        });
+      },
+    );
+  }
+
+  Widget _buildWorkflowDropdown() {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
+    return DropdownButtonFormField<WorkflowType>(
+      value: _workflowType,
+      decoration: InputDecoration(
+        labelText: 'Workflow Type',
+        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+        filled: true,
+        fillColor: scheme.surfaceVariant.withOpacity(0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      items: [
+        const DropdownMenuItem<WorkflowType>(
+          value: null,
+          child: Text('Select Workflow Type'),
+        ),
+        ...WorkflowType.values.map((WorkflowType type) {
+          return DropdownMenuItem<WorkflowType>(
+            value: type,
+            child: Text(type.displayName),
+          );
+        }).toList(),
+      ],
+      onChanged: (WorkflowType? newValue) {
+        setState(() {
+          if (newValue != null) {
+            _workflowType = newValue;
+          }
         });
       },
     );

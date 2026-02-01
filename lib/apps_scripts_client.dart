@@ -154,6 +154,19 @@ class AppsScriptsClient {
     );
   }
 
+  Future<void> submitCutLog(
+    Map<String, dynamic> cutData, [
+    BuildContext? context,
+  ]) async {
+    await _callAppsScript(
+      "addCutLog",
+      [cutData],
+      context,
+      null,
+      "Failed to add cut entry.",
+    );
+  }
+
   Future<String> getNextWorkoutType([BuildContext? context]) async {
     return await _callAppsScript(
           "getNextWorkoutType",
