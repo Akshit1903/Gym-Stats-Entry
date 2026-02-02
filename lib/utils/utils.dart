@@ -96,4 +96,22 @@ class Utils {
     await HomeWidget.saveWidgetData<String>(title, imagePath);
     await HomeWidget.updateWidget(name: 'BodyWeight');
   }
+
+  static double? parseDouble(String? value) {
+    if (value == null) return null;
+    String? inter = double.tryParse(value)?.toStringAsFixed(2);
+    if (inter == null) return null;
+    return double.tryParse(inter);
+  }
+
+  static int? parseInt(String? value) {
+    if (value == null) return null;
+    double? inter = double.tryParse(value);
+    if (inter == null) return null;
+    return inter.toInt();
+  }
+
+  static String? identity(String? value) {
+    return value;
+  }
 }

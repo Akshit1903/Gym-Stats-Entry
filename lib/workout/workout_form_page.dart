@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gym_stats_entry_client/services/samsung_health.dart';
+import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
+import 'package:gym_stats_entry_client/workout/fields/fields.dart';
 import 'package:gym_stats_entry_client/workout/workflow_type.dart';
 import 'package:provider/provider.dart';
 import 'package:gym_stats_entry_client/apps_scripts_client.dart';
@@ -27,22 +29,13 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   late AuthProvider _authProvider;
   WorkflowType _workflowType = WorkflowType.workoutLog;
 
-  // Form field controllers
-  final _bodyweightController = TextEditingController();
-  final _skeletalMassController = TextEditingController();
-  final _fatMassController = TextEditingController();
-  final _bodyWaterController = TextEditingController();
-  final _fatPercentageController = TextEditingController();
-  final _bmrController = TextEditingController();
-  final _energyController = TextEditingController();
-  final _avgHeartRateController = TextEditingController();
-  final _maxHeartRateController = TextEditingController();
-  final _notesController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     _dateController.text = Utils.formatDate(DateTime.now());
+    for (FieldModel field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+      field.init();
+    }
     _appsScriptsClient = AppsScriptsClient.instance;
     _handleNoOfGymDaysHomeWidgetUpdate();
     _fetchAndSetDataFromSamsungHealth();
@@ -58,16 +51,9 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   @override
   void dispose() {
     _dateController.dispose();
-    _bodyweightController.dispose();
-    _skeletalMassController.dispose();
-    _fatMassController.dispose();
-    _bodyWaterController.dispose();
-    _fatPercentageController.dispose();
-    _bmrController.dispose();
-    _energyController.dispose();
-    _avgHeartRateController.dispose();
-    _maxHeartRateController.dispose();
-    _notesController.dispose();
+    for (FieldModel field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+      field.dispose();
+    }
     super.dispose();
   }
 
@@ -92,17 +78,13 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           'Date': Utils.parseFormattedDate(
             _dateController.text,
           ).toIso8601String(),
-          'Bodyweight': double.tryParse(_bodyweightController.text),
-          'SkeletalMass': double.tryParse(_skeletalMassController.text),
-          'FatMass': double.tryParse(_fatMassController.text),
-          'BodyWater': double.tryParse(_bodyWaterController.text),
-          'FatPercent': double.tryParse(_fatPercentageController.text),
-          'BMR': double.tryParse(_bmrController.text),
-          'Workout': _selectedWorkout?.displayName,
-          'Energy': int.tryParse(_energyController.text),
-          'AvgHeartRate': int.tryParse(_avgHeartRateController.text),
-          'MaxHeartRate': int.tryParse(_maxHeartRateController.text),
-          'Notes': _notesController.text,
+          ...{
+            for (final field in [
+              ...BODY_MEASUREMENT_FIELDS,
+              ...EXERCISE_FIELDS,
+            ])
+              field.name: field.valueTransformer(field.controller?.text ?? ''),
+          },
         };
         await _appsScriptsClient.submitWorkoutLog(workoutData, context);
         break;
@@ -111,9 +93,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           'Date': Utils.parseFormattedDate(
             _dateController.text,
           ).toIso8601String(),
-          'Bodyweight': double.tryParse(_bodyweightController.text),
-          'SkeletalMass': double.tryParse(_skeletalMassController.text),
-          'FatMass': double.tryParse(_fatMassController.text),
+          ...{
+            for (final field in BODY_MEASUREMENT_FIELDS)
+              field.name: field.valueTransformer(field.controller?.text ?? ''),
+          },
         };
         await _appsScriptsClient.submitCutLog(cutData, context);
         break;
@@ -149,16 +132,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _fetchAndSetDataFromSamsungHealth() async {
-    String? parseNumber(String? value, [int fractionDigits = 2]) {
-      if (value == null) return null;
-      final parsed = double.tryParse(value);
-      if (parsed == null) return null;
-      if (fractionDigits == 0) {
-        return parsed.toInt().toString();
-      }
-      return double.parse(parsed.toStringAsFixed(fractionDigits)).toString();
-    }
-
     setState(() {
       _isFetchingFromSamsungHealth = true;
     });
@@ -166,28 +139,15 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         await SamsungHealth.getBodyCompositionAndExerciseData();
 
     if (data != null && mounted) {
-      String? basalMetabolicRate = data['basal_metabolic_rate'];
-      String? bodyFatPercentage = parseNumber(data['body_fat']);
-      String? bodyFatMass = parseNumber(data['body_fat_mass']);
-      // String? fatFreeMass = data['fat_free_mass'];
-      String? skeletalMuscleMass = parseNumber(data['skeletal_muscle_mass']);
-      String? totalBodyWater = parseNumber(data['total_body_water']);
-      String? weight = data['weight'];
-      String? calories = parseNumber(data['calories'], 0);
-      // String? duration = data['duration'];
-      String? maxHeartRate = parseNumber(data['maxHeartRate'], 0);
-      String? meanHeartRate = parseNumber(data['meanHeartRate'], 0);
-
       setState(() {
-        _bodyweightController.text = weight ?? '';
-        _skeletalMassController.text = skeletalMuscleMass ?? '';
-        _fatMassController.text = bodyFatMass ?? '';
-        _bodyWaterController.text = totalBodyWater ?? '';
-        _fatPercentageController.text = bodyFatPercentage ?? '';
-        _bmrController.text = basalMetabolicRate ?? '';
-        _energyController.text = calories ?? '';
-        _maxHeartRateController.text = maxHeartRate ?? '';
-        _avgHeartRateController.text = meanHeartRate ?? '';
+        for (final field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+          final samsungKey = field.samsungHealthDataKey;
+          if (samsungKey != null && data.containsKey(samsungKey)) {
+            field.controller?.text = field
+                .valueTransformer(data[samsungKey] ?? '')
+                .toString();
+          }
+        }
       });
     } else {
       if (mounted) {
@@ -223,16 +183,9 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _formKey.currentState!.reset();
     _dateController.text = Utils.formatDate(DateTime.now());
     _selectedWorkout = null;
-    _bodyweightController.clear();
-    _skeletalMassController.clear();
-    _fatMassController.clear();
-    _bodyWaterController.clear();
-    _fatPercentageController.clear();
-    _bmrController.clear();
-    _energyController.clear();
-    _avgHeartRateController.clear();
-    _maxHeartRateController.clear();
-    _notesController.clear();
+    for (final field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+      field.controller?.clear();
+    }
   }
 
   Color _parseNoOfGymDaysColor(String noOfGymDays) {
@@ -347,150 +300,26 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 const SizedBox(height: 24),
 
                 // Body Measurements Section
-                _buildSectionHeader('Body Measurements'),
-                const SizedBox(height: 16),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _bodyweightController,
-                        label: 'Bodyweight (kg)',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _skeletalMassController,
-                        label: 'Skeletal Mass (kg)',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _fatMassController,
-                        label: 'Fat Mass (kg)',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _bodyWaterController,
-                        label: 'Body Water (kg)',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _fatPercentageController,
-                        label: 'Fat %',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _bmrController,
-                        label: 'BMR',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
+                if ([
+                  WorkflowType.workoutLog,
+                  WorkflowType.cutLog,
+                ].contains(_workflowType)) ...[
+                  _buildSectionHeader('Body Measurements'),
+                  const SizedBox(height: 16),
+                  ..._buildSectionBody(BODY_MEASUREMENT_FIELDS),
+                  const SizedBox(height: 8),
+                ],
                 // Workout Section
-                if (_workflowType == WorkflowType.workoutLog) ...[
+                if ([WorkflowType.workoutLog].contains(_workflowType)) ...[
                   _buildSectionHeader('Workout Details'),
                   const SizedBox(height: 16),
-
                   _buildWorkoutDropdown(),
                   const SizedBox(height: 16),
-
-                  _buildTextField(
-                    controller: _energyController,
-                    label: 'Energy (kcal)',
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _avgHeartRateController,
-                          label: 'Avg. Heart Rate (bpm)',
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _maxHeartRateController,
-                          label: 'Max. Heart Rate (bpm)',
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildTextField(
-                    controller: _notesController,
-                    label: 'Notes',
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 32),
+                  ..._buildSectionBody(EXERCISE_FIELDS),
                 ],
 
                 // Submit Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: scheme.primary,
-                      foregroundColor: scheme.onPrimary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text(
-                            'Submit Workout Entry',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
+                _buildSubmitButton(scheme),
               ],
             ),
           ),
@@ -507,6 +336,41 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         color: Theme.of(context).colorScheme.primary,
       ),
     );
+  }
+
+  List<Widget> _buildSectionBody(List<FieldModel> fields) {
+    List<List<Widget>> rows = [];
+    for (FieldModel field in fields) {
+      if (field.controller == null) {
+        continue;
+      }
+      if (field.startsFromNewRow || rows.isEmpty) {
+        rows.add([]);
+      }
+      rows.last.add(
+        Expanded(
+          child: _buildTextField(
+            controller: field.controller,
+            label: field.displayName,
+            keyboardType: field.textInputType,
+            maxLines: field.maxLines,
+          ),
+        ),
+      );
+    }
+    return rows.map((rowFields) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            ...rowFields
+                .expand((widget) => [widget, const SizedBox(width: 16)])
+                .toList()
+              ..removeLast(),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   Widget _buildWorkoutDropdown() {
@@ -585,7 +449,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             value: type,
             child: Text(type.displayName),
           );
-        }).toList(),
+        }),
       ],
       onChanged: (WorkflowType? newValue) {
         setState(() {
@@ -598,7 +462,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
+    required TextEditingController? controller,
     required String label,
     TextInputType? keyboardType,
     int maxLines = 1,
@@ -612,7 +476,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
       style: TextStyle(color: scheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+        labelStyle: TextStyle(
+          color: scheme.onSurfaceVariant,
+          overflow: TextOverflow.visible,
+        ),
         filled: true,
         fillColor: scheme.surfaceVariant.withOpacity(0.3),
         border: OutlineInputBorder(
@@ -667,6 +534,37 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           vertical: 16,
         ),
         suffixIcon: Icon(Icons.calendar_today, color: scheme.primary),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(ColorScheme scheme) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _isSubmitting ? null : _submitForm,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: _isSubmitting
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Submit Workout Entry',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
       ),
     );
   }
