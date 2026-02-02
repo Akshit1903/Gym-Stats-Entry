@@ -289,9 +289,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
-
-                _buildWorkflowDropdown(),
+                const SizedBox(height: 16),
+                _buildWorkflowChips(),
                 const SizedBox(height: 24),
                 // Date Field
                 _buildDateField(),
@@ -416,48 +415,35 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     );
   }
 
-  Widget _buildWorkflowDropdown() {
+  Widget _buildWorkflowChips() {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: WorkflowType.values.map((type) {
+            final bool isSelected = _workflowType == type;
 
-    return DropdownButtonFormField<WorkflowType>(
-      value: _workflowType,
-      decoration: InputDecoration(
-        labelText: 'Workflow Type',
-        labelStyle: TextStyle(color: scheme.onSurfaceVariant),
-        filled: true,
-        fillColor: scheme.surfaceVariant.withOpacity(0.3),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+            return ChoiceChip(
+              label: Text(type.displayName),
+              selected: isSelected,
+              onSelected: (_) {
+                setState(() {
+                  _workflowType = type;
+                });
+              },
+              selectedColor: scheme.primary.withOpacity(0.2),
+              backgroundColor: scheme.surfaceVariant.withOpacity(0.3),
+              labelStyle: TextStyle(
+                color: isSelected ? scheme.primary : scheme.onSurface,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            );
+          }).toList(),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: scheme.primary, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      items: [
-        const DropdownMenuItem<WorkflowType>(
-          value: null,
-          child: Text('Select Workflow Type'),
-        ),
-        ...WorkflowType.values.map((WorkflowType type) {
-          return DropdownMenuItem<WorkflowType>(
-            value: type,
-            child: Text(type.displayName),
-          );
-        }),
       ],
-      onChanged: (WorkflowType? newValue) {
-        setState(() {
-          if (newValue != null) {
-            _workflowType = newValue;
-          }
-        });
-      },
     );
   }
 
@@ -561,8 +547,8 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Submit Workout Entry',
+            : Text(
+                'Submit ${_workflowType.displayName}',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
       ),
