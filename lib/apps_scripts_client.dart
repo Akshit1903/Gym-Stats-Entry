@@ -96,6 +96,12 @@ class AppsScriptsClient {
 
       if (response.statusCode == 200) {
         Map<String, dynamic> responseJson = jsonDecode(response.body);
+        if (responseJson["error"] != null &&
+            responseJson["error"]["details"] != null) {
+          String errorDetails = responseJson["error"]["details"].toString();
+          Utils.showSnackBar('Error: $errorDetails', Colors.red, context);
+          return null;
+        }
         assert(responseJson["done"] as bool);
         String result = responseJson["response"]["result"].toString();
         if (context != null && context.mounted && successMessage != null) {
@@ -154,11 +160,11 @@ class AppsScriptsClient {
     );
   }
 
-  Future<void> submitCutLog(
+  Future<String?> submitCutLog(
     Map<String, dynamic> cutData, [
     BuildContext? context,
   ]) async {
-    await _callAppsScript(
+    return await _callAppsScript(
       "addCutLog",
       [cutData],
       context,

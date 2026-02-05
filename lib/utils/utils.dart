@@ -25,9 +25,9 @@ class Utils {
   static void showSnackBar(
     String message,
     Color? backgroundColor,
-    BuildContext context,
+    BuildContext? context,
   ) {
-    if (context.mounted) {
+    if (context != null && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: backgroundColor),
       );

@@ -13,17 +13,17 @@ import com.samsung.android.sdk.health.data.request.LocalTimeFilter
 import com.samsung.android.sdk.health.data.request.Ordering
 import com.samsung.android.sdk.health.data.request.DataType.ExerciseType.PredefinedExerciseType
 import com.samsung.android.sdk.health.data.data.entries.ExerciseSession
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.*
 import java.time.LocalDateTime
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
 
     private val CHANNEL = "com.akshit.gymstats"
     private val TAG = "SamsungHealth"
-    private lateinit var healthDataStore: HealthDataStore
+    private var healthDataStore: HealthDataStore? = null
     private val job = Job()
     private val scope = CoroutineScope(Dispatchers.IO + job)
 
@@ -52,17 +52,18 @@ class MainActivity : FlutterActivity() {
 
     private fun connectToSamsungHealth(onConnected: (Boolean) -> Unit) {
         try {
-            healthDataStore = HealthDataService.getStore(context)
+            healthDataStore = HealthDataService.getStore(this)
             val permissions: Set<Permission> = setOf(
                 Permission.of(DataTypes.BODY_COMPOSITION, AccessType.READ),
                 Permission.of(DataTypes.EXERCISE, AccessType.READ)
             )
             scope.launch {
                 try {
-                    val granted = healthDataStore.getGrantedPermissions(permissions)
+                    val store = healthDataStore ?: throw Exception("Store not ready")
+                    val granted = store.getGrantedPermissions(permissions)
                     Log.e(TAG, "Granted permissions: $granted")
                     if (!granted.containsAll(permissions)) {
-                        healthDataStore.requestPermissions(permissions, this@MainActivity as Activity)
+                        store.requestPermissions(permissions, this@MainActivity as Activity)
                     }
                     withContext(Dispatchers.Main) {
                         onConnected(true)
@@ -83,14 +84,15 @@ class MainActivity : FlutterActivity() {
     private fun setBodyCompositionAndLastWeightsExerciseData(onResult: (Map<String, Any>?) -> Unit) {
         scope.launch {
             try {
+                val store = healthDataStore ?: throw Exception("Store not ready")
                 val resultMap = mutableMapOf<String, String>()
-                val startTime = LocalDateTime.now().minusHours(12)
+                val startTime = LocalDateTime.now().minusHours(18)
                 val localTimeFilter = LocalTimeFilter.since(startTime)
                 val bodyCompositionReadRequest = DataTypes.BODY_COMPOSITION.readDataRequestBuilder
                     .setLocalTimeFilter(localTimeFilter)
                     .setOrdering(Ordering.DESC)
                     .build()
-                val bodyCompositionData : HealthDataPoint? = healthDataStore.readData(bodyCompositionReadRequest).dataList.getOrNull(0)
+                val bodyCompositionData : HealthDataPoint? = store.readData(bodyCompositionReadRequest).dataList.getOrNull(0)
                 Log.e(TAG, "Body composition data: $bodyCompositionData")
                 if(bodyCompositionData!=null){
                     resultMap["basal_metabolic_rate"]=bodyCompositionData.getValue(DataType.BodyCompositionType.BASAL_METABOLIC_RATE).toString()
@@ -109,7 +111,7 @@ class MainActivity : FlutterActivity() {
                     Log.e(TAG, "Exercise type: ${healthDataPoint.getValue(DataType.ExerciseType.EXERCISE_TYPE)}")
                     return healthDataPoint.getValue(DataType.ExerciseType.EXERCISE_TYPE) == PredefinedExerciseType.WEIGHT_MACHINE
                 }
-                val exerciseData : HealthDataPoint? = healthDataStore.readData(exerciseReadRequest).dataList.firstOrNull(::isExerciseTypeWeight)
+                val exerciseData : HealthDataPoint? = store.readData(exerciseReadRequest).dataList.firstOrNull(::isExerciseTypeWeight)
                 Log.e(TAG,"Exercise data: ${exerciseData.toString()}")
                 if(exerciseData != null){
                     val sessionData : List<ExerciseSession> = exerciseData.getValue(DataType.ExerciseType.SESSIONS) as List<ExerciseSession>

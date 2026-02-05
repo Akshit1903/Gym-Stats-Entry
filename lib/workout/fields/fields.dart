@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
 
@@ -14,6 +15,7 @@ List<FieldModel> BODY_MEASUREMENT_FIELDS = [
     displayName: 'Skeletal Muscle Mass (kg)',
     samsungHealthDataKey: 'skeletal_muscle_mass',
     valueTransformer: Utils.parseDouble,
+    moreTheMerrier: true,
   ),
   FieldModel(
     name: 'FatMass',
@@ -63,5 +65,41 @@ List<FieldModel> EXERCISE_FIELDS = [
     samsungHealthDataKey: 'maxHeartRate',
     valueTransformer: Utils.parseInt,
   ),
-  FieldModel(name: "Notes", displayName: "Notes", startsFromNewRow: true),
+  FieldModel(
+    name: "Notes",
+    displayName: "Notes",
+    maxLines: 3,
+    startsFromNewRow: true,
+    textInputType: TextInputType.multiline,
+  ),
+];
+
+List<FieldModel> NUTRITION_FIELDS = [
+  FieldModel(
+    name: 'Calories',
+    displayName: 'Calories (kcal)',
+    healthConnectDataKey: "calories",
+    valueTransformer: Utils.parseInt,
+    startsFromNewRow: true,
+  ),
+  FieldModel(
+    name: 'Protein',
+    displayName: 'Protein (g)',
+    healthConnectDataKey: "protein",
+    valueTransformer: Utils.parseInt,
+    moreTheMerrier: true,
+  ),
+  FieldModel(
+    name: 'Carbohydrates',
+    displayName: 'Carbohydrates (g)',
+    healthConnectDataKey: "carbs",
+    valueTransformer: Utils.parseInt,
+    startsFromNewRow: true,
+  ),
+  FieldModel(
+    name: 'Fats',
+    displayName: 'Fats (g)',
+    healthConnectDataKey: "fat",
+    valueTransformer: Utils.parseInt,
+  ),
 ];

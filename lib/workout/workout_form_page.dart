@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:gym_stats_entry_client/services/health_connect.dart';
 import 'package:gym_stats_entry_client/services/samsung_health.dart';
+import 'package:gym_stats_entry_client/workout/cut_log_diff_fields_page.dart';
 import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
 import 'package:gym_stats_entry_client/workout/fields/fields.dart';
 import 'package:gym_stats_entry_client/workout/workflow_type.dart';
@@ -33,13 +37,18 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   void initState() {
     super.initState();
     _dateController.text = Utils.formatDate(DateTime.now());
-    for (FieldModel field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+    for (FieldModel field in [
+      ...BODY_MEASUREMENT_FIELDS,
+      ...EXERCISE_FIELDS,
+      ...NUTRITION_FIELDS,
+    ]) {
       field.init();
     }
     _appsScriptsClient = AppsScriptsClient.instance;
     _handleNoOfGymDaysHomeWidgetUpdate();
     _fetchAndSetDataFromSamsungHealth();
     _setNextWorkoutType();
+    HealthConnect.setNutritionData(context);
   }
 
   @override
@@ -51,7 +60,11 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   @override
   void dispose() {
     _dateController.dispose();
-    for (FieldModel field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+    for (FieldModel field in [
+      ...BODY_MEASUREMENT_FIELDS,
+      ...EXERCISE_FIELDS,
+      ...NUTRITION_FIELDS,
+    ]) {
       field.dispose();
     }
     super.dispose();
@@ -69,6 +82,30 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _submitForm() async {
+    Widget getNextPage() {
+      switch (_workflowType) {
+        case WorkflowType.workoutLog:
+          return GraphsPage();
+        case WorkflowType.cutLog:
+          return CutLogDiffFieldsPage();
+      }
+    }
+
+    void enrichCutDataToFieldsAfterSubmission(String? cutLogResponse) {
+      Map<String, dynamic> cutLogResponseJson = jsonDecode(
+        cutLogResponse ?? '{}',
+      );
+      cutLogResponseJson.forEach((key, value) {
+        for (final field in [...BODY_MEASUREMENT_FIELDS, ...NUTRITION_FIELDS]) {
+          if (field.name == key) {
+            field.diffResponseValue = field
+                .valueTransformer(value.toString())
+                .toString();
+          }
+        }
+      });
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -78,6 +115,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           'Date': Utils.parseFormattedDate(
             _dateController.text,
           ).toIso8601String(),
+          'Workout': _selectedWorkout?.displayName ?? '',
           ...{
             for (final field in [
               ...BODY_MEASUREMENT_FIELDS,
@@ -94,20 +132,28 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             _dateController.text,
           ).toIso8601String(),
           ...{
-            for (final field in BODY_MEASUREMENT_FIELDS)
+            for (final field in [
+              ...BODY_MEASUREMENT_FIELDS,
+              ...NUTRITION_FIELDS,
+            ])
               field.name: field.valueTransformer(field.controller?.text ?? ''),
           },
         };
-        await _appsScriptsClient.submitCutLog(cutData, context);
+        String? cutLogResponse = await _appsScriptsClient.submitCutLog(
+          cutData,
+          context,
+        );
+        enrichCutDataToFieldsAfterSubmission(cutLogResponse);
         break;
     }
 
     _resetForm();
     _handleNoOfGymDaysHomeWidgetUpdate();
+
     if (mounted) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => GraphsPage()),
+        MaterialPageRoute(builder: (context) => getNextPage()),
       );
     }
 
@@ -183,7 +229,11 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     _formKey.currentState!.reset();
     _dateController.text = Utils.formatDate(DateTime.now());
     _selectedWorkout = null;
-    for (final field in [...BODY_MEASUREMENT_FIELDS, ...EXERCISE_FIELDS]) {
+    for (final field in [
+      ...BODY_MEASUREMENT_FIELDS,
+      ...EXERCISE_FIELDS,
+      ...NUTRITION_FIELDS,
+    ]) {
       field.controller?.clear();
     }
   }
@@ -221,6 +271,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                     _handleNoOfGymDaysHomeWidgetUpdate();
                     _fetchAndSetDataFromSamsungHealth();
                     _setNextWorkoutType();
+                    HealthConnect.setNutritionData(context);
                   },
             icon: _isSubmitting
                 ? SizedBox(
@@ -245,12 +296,14 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             tooltip: 'Settings',
           ),
           const SizedBox(width: 8),
-          CircleAvatar(
-            backgroundImage: NetworkImage(
-              _authProvider.currentUser?.photoUrl ?? '',
+          if (_authProvider.currentUser != null &&
+              _authProvider.currentUser!.photoUrl != null)
+            CircleAvatar(
+              backgroundImage: NetworkImage(
+                _authProvider.currentUser?.photoUrl ?? '',
+              ),
+              radius: 16,
             ),
-            radius: 16,
-          ),
           const SizedBox(width: 16),
           IconButton(
             icon: Icon(Icons.logout, color: scheme.onSurfaceVariant),
@@ -316,7 +369,12 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                   const SizedBox(height: 16),
                   ..._buildSectionBody(EXERCISE_FIELDS),
                 ],
-
+                if ([WorkflowType.cutLog].contains(_workflowType)) ...[
+                  _buildSectionHeader('Nutrition Details'),
+                  const SizedBox(height: 16),
+                  ..._buildSectionBody(NUTRITION_FIELDS),
+                  const SizedBox(height: 8),
+                ],
                 // Submit Button
                 _buildSubmitButton(scheme),
               ],
