@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:gym_stats_entry_client/common/constants.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:gym_stats_entry_client/utils/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Utils {

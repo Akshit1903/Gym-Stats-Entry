@@ -1,9 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'package:gym_stats_entry_client/apps_scripts_client.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
+import 'package:flutter/material.dart';
+import 'package:gym_stats_entry_client/clients/gym_stats_apps_scripts_client.dart';
+import 'package:gym_stats_entry_client/common/dependency_injection.dart';
+import 'package:gym_stats_entry_client/common/utils.dart';
 import 'package:intl/intl.dart';
 
 class GraphsPage extends StatefulWidget {
@@ -17,12 +18,12 @@ class _GraphsPageState extends State<GraphsPage> {
   List<List<String>> _workoutHistory = [];
   bool _isLoading = true;
   String? _error;
-  late AppsScriptsClient _appsScriptsClient;
+  final GymStatsAppsScriptsClient _gymStatsAppsScriptsClient =
+      getIt<GymStatsAppsScriptsClient>();
 
   @override
   void initState() {
     super.initState();
-    _appsScriptsClient = AppsScriptsClient.instance;
     _fetchWorkoutData();
   }
 
@@ -33,9 +34,8 @@ class _GraphsPageState extends State<GraphsPage> {
         _error = null;
       });
 
-      final workoutHistoryResponse = await _appsScriptsClient.getWorkoutData(
-        context,
-      );
+      final workoutHistoryResponse = await _gymStatsAppsScriptsClient
+          .getWorkoutData(context);
 
       setState(() {
         List<dynamic> inter = JsonDecoder().convert(
@@ -63,17 +63,13 @@ class _GraphsPageState extends State<GraphsPage> {
     final currentWorkoutData = _workoutHistory
         .where(
           (row) =>
-              row[0] != null &&
-              row[0] != "" &&
-              dataIndex < row.length &&
-              row[dataIndex] != null &&
-              row[dataIndex] != "",
+              row[0] != "" && dataIndex < row.length && row[dataIndex] != "",
         )
         .toList();
     for (int i = 0; i < currentWorkoutData.length; i++) {
       final row = currentWorkoutData[i];
-      if (row.isEmpty || row[0] == null || row[0] == "") continue;
-      if (row.length > dataIndex && row[dataIndex] != null) {
+      if (row.isEmpty || row[0] == "") continue;
+      if (row.length > dataIndex) {
         final value = double.tryParse(row[dataIndex].toString());
         if (value != null) {
           double x = currentWorkoutData.length == 1
@@ -88,7 +84,7 @@ class _GraphsPageState extends State<GraphsPage> {
 
   List<String> _getDateLabels() {
     return _workoutHistory.map((row) {
-      if (row.isNotEmpty && row[0] != null) {
+      if (row.isNotEmpty) {
         return row[0].toString();
       }
       return '';

@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
+import 'package:gym_stats_entry_client/common/utils.dart';
 import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
 
 List<FieldModel> BODY_MEASUREMENT_FIELDS = [

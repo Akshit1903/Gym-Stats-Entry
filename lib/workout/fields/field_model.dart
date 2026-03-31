@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
+import 'package:gym_stats_entry_client/common/utils.dart';
 
 class FieldModel {
   final String name;

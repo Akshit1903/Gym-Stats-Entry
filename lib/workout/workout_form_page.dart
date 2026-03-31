@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:gym_stats_entry_client/clients/gym_stats_apps_scripts_client.dart';
+import 'package:gym_stats_entry_client/common/dependency_injection.dart';
+import 'package:gym_stats_entry_client/common/utils.dart';
 import 'package:gym_stats_entry_client/services/health_connect.dart';
 import 'package:gym_stats_entry_client/services/samsung_health.dart';
 import 'package:gym_stats_entry_client/workout/cut_log_diff_fields_page.dart';
@@ -8,11 +11,10 @@ import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
 import 'package:gym_stats_entry_client/workout/fields/fields.dart';
 import 'package:gym_stats_entry_client/workout/workflow_type.dart';
 import 'package:provider/provider.dart';
-import 'package:gym_stats_entry_client/apps_scripts_client.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
+
+import '../graphs_page.dart';
 import '../providers/auth_provider.dart';
 import '../settings/settings_page.dart';
-import '../graphs_page.dart';
 import 'workout_type.dart';
 
 class WorkoutFormPage extends StatefulWidget {
@@ -25,13 +27,18 @@ class WorkoutFormPage extends StatefulWidget {
 class _WorkoutFormPageState extends State<WorkoutFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _dateController = TextEditingController();
-  bool _isSubmitting = false;
-  bool _isFetchingFromSamsungHealth = false;
-  late AppsScriptsClient _appsScriptsClient;
+  final GymStatsAppsScriptsClient _gymStatsAppsScriptsClient =
+      getIt<GymStatsAppsScriptsClient>();
   String _noOfGymDays = "-";
   WorkoutType? _selectedWorkout;
-  late AuthProvider _authProvider;
   WorkflowType _workflowType = WorkflowType.workoutLog;
+
+  // Loading states
+  bool _isSubmitting = false;
+  bool _isLoadingGymConsistentDays = false;
+  bool _isLoadingNextWorkoutType = false;
+  bool _isLoadingSamsungHealthData = false;
+  bool _isLoadingHealthConnectNutritionData = false;
 
   @override
   void initState() {
@@ -44,17 +51,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     ]) {
       field.init();
     }
-    _appsScriptsClient = AppsScriptsClient.instance;
-    _handleNoOfGymDaysHomeWidgetUpdate();
-    _fetchAndSetDataFromSamsungHealth();
+    _setGymConsistentDays();
+    _setSamsungHealthData();
     _setNextWorkoutType();
-    HealthConnect.setNutritionData(context);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _authProvider = Provider.of<AuthProvider>(context);
+    _setHealthConnectNutritionData();
   }
 
   @override
@@ -71,14 +71,10 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
   }
 
   Future<void> _openSettings() async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsPage()),
     );
-    // Refresh the page if settings were updated
-    if (mounted && result == true) {
-      setState(() {});
-    }
   }
 
   Future<void> _submitForm() async {
@@ -124,7 +120,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
               field.name: field.valueTransformer(field.controller?.text ?? ''),
           },
         };
-        await _appsScriptsClient.submitWorkoutLog(workoutData, context);
+        await _gymStatsAppsScriptsClient.submitWorkoutLog(workoutData, context);
         break;
       case WorkflowType.cutLog:
         final cutData = {
@@ -139,7 +135,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
               field.name: field.valueTransformer(field.controller?.text ?? ''),
           },
         };
-        String? cutLogResponse = await _appsScriptsClient.submitCutLog(
+        String? cutLogResponse = await _gymStatsAppsScriptsClient.submitCutLog(
           cutData,
           context,
         );
@@ -148,7 +144,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     }
 
     _resetForm();
-    _handleNoOfGymDaysHomeWidgetUpdate();
+    _setGymConsistentDays();
 
     if (mounted) {
       Navigator.push(
@@ -162,24 +158,24 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     });
   }
 
-  Future<void> _handleNoOfGymDaysHomeWidgetUpdate() async {
+  Future<void> _setGymConsistentDays() async {
     setState(() {
-      _isSubmitting = true;
+      _isLoadingGymConsistentDays = true;
     });
 
-    _noOfGymDays = await _appsScriptsClient.getNumberOfGymDays(context);
+    _noOfGymDays = await _gymStatsAppsScriptsClient.getNumberOfGymDays(context);
     if (mounted) {
       setState(() {
-        _isSubmitting = false;
+        _isLoadingGymConsistentDays = false;
       });
     }
 
     Utils.updateNoOfGymDaysHomeWidget(_noOfGymDays);
   }
 
-  Future<void> _fetchAndSetDataFromSamsungHealth() async {
+  Future<void> _setSamsungHealthData() async {
     setState(() {
-      _isFetchingFromSamsungHealth = true;
+      _isLoadingSamsungHealthData = true;
     });
     final Map<String, String>? data =
         await SamsungHealth.getBodyCompositionAndExerciseData();
@@ -206,13 +202,17 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     }
     if (mounted) {
       setState(() {
-        _isFetchingFromSamsungHealth = false;
+        _isLoadingSamsungHealthData = false;
       });
     }
   }
 
   Future<void> _setNextWorkoutType() async {
-    String nextWorkoutTypeResponse = await _appsScriptsClient
+    setState(() {
+      _isLoadingNextWorkoutType = true;
+    });
+
+    String nextWorkoutTypeResponse = await _gymStatsAppsScriptsClient
         .getNextWorkoutType(context);
     WorkoutType? nextWorkoutType = WorkoutType.values.firstWhere(
       (type) => type.displayName == nextWorkoutTypeResponse,
@@ -221,8 +221,19 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     if (mounted) {
       setState(() {
         _selectedWorkout = nextWorkoutType;
+        _isLoadingNextWorkoutType = false;
       });
     }
+  }
+
+  Future<void> _setHealthConnectNutritionData() async {
+    setState(() {
+      _isLoadingHealthConnectNutritionData = true;
+    });
+    await HealthConnect.setNutritionData(context);
+    setState(() {
+      _isLoadingHealthConnectNutritionData = false;
+    });
   }
 
   void _resetForm() {
@@ -254,8 +265,13 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final AuthProvider authProvider = context.watch<AuthProvider>();
     final ColorScheme scheme = Theme.of(context).colorScheme;
-
+    bool isLoadingData =
+        _isLoadingGymConsistentDays ||
+        _isLoadingSamsungHealthData ||
+        _isLoadingNextWorkoutType ||
+        _isLoadingHealthConnectNutritionData;
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
@@ -265,15 +281,15 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: _isSubmitting
+            onPressed: isLoadingData
                 ? null
                 : () {
-                    _handleNoOfGymDaysHomeWidgetUpdate();
-                    _fetchAndSetDataFromSamsungHealth();
+                    _setGymConsistentDays();
+                    _setSamsungHealthData();
                     _setNextWorkoutType();
-                    HealthConnect.setNutritionData(context);
+                    _setHealthConnectNutritionData();
                   },
-            icon: _isSubmitting
+            icon: isLoadingData
                 ? SizedBox(
                     height: 15,
                     width: 15,
@@ -296,18 +312,9 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             tooltip: 'Settings',
           ),
           const SizedBox(width: 8),
-          if (_authProvider.currentUser != null &&
-              _authProvider.currentUser!.photoUrl != null)
-            CircleAvatar(
-              backgroundImage: NetworkImage(
-                _authProvider.currentUser?.photoUrl ?? '',
-              ),
-              radius: 16,
-            ),
-          const SizedBox(width: 16),
           IconButton(
             icon: Icon(Icons.logout, color: scheme.onSurfaceVariant),
-            onPressed: _authProvider.signOut,
+            onPressed: authProvider.signOut,
             tooltip: 'Sign Out',
           ),
           const SizedBox(width: 8),
@@ -348,7 +355,6 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 // Date Field
                 _buildDateField(),
 
-                if (_isFetchingFromSamsungHealth) LinearProgressIndicator(),
                 const SizedBox(height: 24),
 
                 // Body Measurements Section
@@ -434,12 +440,12 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return DropdownButtonFormField<WorkoutType>(
-      value: _selectedWorkout,
+      initialValue: _selectedWorkout,
       decoration: InputDecoration(
         labelText: 'Workout Type',
         labelStyle: TextStyle(color: scheme.onSurfaceVariant),
         filled: true,
-        fillColor: scheme.surfaceVariant.withOpacity(0.3),
+        fillColor: scheme.surfaceContainerHighest.withOpacity(0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -463,7 +469,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
             value: type,
             child: Text(type.displayName),
           );
-        }).toList(),
+        }),
       ],
       onChanged: (WorkoutType? newValue) {
         setState(() {
@@ -493,7 +499,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
                 });
               },
               selectedColor: scheme.primary.withOpacity(0.2),
-              backgroundColor: scheme.surfaceVariant.withOpacity(0.3),
+              backgroundColor: scheme.surfaceContainerHighest.withOpacity(0.3),
               labelStyle: TextStyle(
                 color: isSelected ? scheme.primary : scheme.onSurface,
               ),
@@ -525,7 +531,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
           overflow: TextOverflow.visible,
         ),
         filled: true,
-        fillColor: scheme.surfaceVariant.withOpacity(0.3),
+        fillColor: scheme.surfaceContainerHighest.withOpacity(0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -564,7 +570,7 @@ class _WorkoutFormPageState extends State<WorkoutFormPage> {
         labelText: 'Date',
         labelStyle: TextStyle(color: scheme.onSurfaceVariant),
         filled: true,
-        fillColor: scheme.surfaceVariant.withOpacity(0.3),
+        fillColor: scheme.surfaceContainerHighest.withOpacity(0.3),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

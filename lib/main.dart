@@ -1,59 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:gym_stats_entry_client/apps_scripts_client.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:gym_stats_entry_client/common/background_service.dart';
+import 'package:gym_stats_entry_client/common/dependency_injection.dart';
 import 'package:gym_stats_entry_client/providers/auth_provider.dart';
+import 'package:gym_stats_entry_client/services/auth_service.dart';
 import 'package:gym_stats_entry_client/sign_in_view.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
 import 'package:gym_stats_entry_client/workout/workout_form_page.dart';
-import 'package:workmanager/workmanager.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
 
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    switch (task) {
-      case "updateGymDays":
-        final GoogleSignIn signIn = GoogleSignIn(scopes: AuthProvider.SCOPES);
-        final GoogleSignInAccount? user = await signIn.signInSilently();
-        AppsScriptsClient.instance.setUser(user);
-        final appsScriptsClient = AppsScriptsClient.instance;
-        String noOfGymDays = await appsScriptsClient.getNumberOfGymDays();
-        if (int.tryParse(noOfGymDays) != null) {
-          await Utils.updateNoOfGymDaysHomeWidget(noOfGymDays);
-        }
-    }
-    return true;
-  });
-}
-
-Future<void> initWorkManager() async {
-  await Workmanager().initialize(callbackDispatcher);
-  final now = DateTime.now();
-  final next1201 = DateTime(now.year, now.month, now.day, 0, 1).add(
-    now.isBefore(DateTime(now.year, now.month, now.day, 0, 1))
-        ? Duration.zero
-        : const Duration(days: 1),
-  );
-  Duration initialDelay = next1201.difference(now);
-  await Workmanager().registerPeriodicTask(
-    "gymWidgetTask",
-    "updateGymDays",
-    frequency: const Duration(days: 1),
-    initialDelay: initialDelay,
-    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-  );
-
-  // ⚡ Immediate one-off debug task (runs after 10 seconds)
-  // await Workmanager().registerOneOffTask(
-  //   "debugGymWidgetTask",
-  //   "updateGymDays",
-  //   initialDelay: const Duration(seconds: 10),
-  // );
+Future<void> initApp() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
+  await BackgroundService.initWorkManager();
+  setUpLocators();
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initWorkManager();
+  await initApp();
   runApp(const MainApp());
 }
 
@@ -77,19 +40,14 @@ class AppWrapper extends StatefulWidget {
 }
 
 class _AppWrapperState extends State<AppWrapper> {
-  late AuthProvider _authProvider;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _authProvider = Provider.of<AuthProvider>(context);
-  }
+  final AuthService _authService = getIt<AuthService>();
 
   @override
   Widget build(BuildContext context) {
+    final AuthProvider authProvider = context.watch<AuthProvider>();
     return FutureBuilder(
-      future: _authProvider.isSignedIn(),
+      future: _authService.silentSignIn(),
       builder: (context, snapshot) {
-        // return BodyCompositionPage();
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -100,7 +58,7 @@ class _AppWrapperState extends State<AppWrapper> {
             body: Center(child: Text('Error: ${snapshot.error}')),
           );
         }
-        final isSignedIn = snapshot.data ?? false;
+        final isSignedIn = authProvider.isAuthenticated;
         return isSignedIn ? WorkoutFormPage() : SignInView();
       },
     );

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gym_stats_entry_client/utils/utils.dart';
+import 'package:gym_stats_entry_client/common/utils.dart';
 import 'package:gym_stats_entry_client/workout/fields/field_model.dart';
 import 'package:gym_stats_entry_client/workout/fields/fields.dart';
 import 'package:health/health.dart';

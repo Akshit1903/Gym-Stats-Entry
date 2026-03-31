@@ -1,54 +1,45 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:gym_stats_entry_client/apps_scripts_client.dart';
+import 'package:gym_stats_entry_client/common/dependency_injection.dart';
+import 'package:gym_stats_entry_client/services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  static const SCOPES = [
-    "https://www.googleapis.com/auth/script.projects",
-    "https://www.googleapis.com/auth/spreadsheets",
-    'https://www.googleapis.com/auth/drive.file',
-  ];
-  final GoogleSignIn _signIn = GoogleSignIn(scopes: SCOPES);
-
-  GoogleSignInAccount? _currentUser;
-  GoogleSignInAccount? get currentUser => _currentUser;
+  final AuthService _authService;
 
   bool _isSigningIn = false;
-  bool get isSigningIn => _isSigningIn;
+  bool _isAuthenticated = false;
 
-  AuthProvider() {
-    silentSignIn();
-    _signIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) async {
-      _currentUser = account;
-      AppsScriptsClient.instance.setUser(account);
+  AuthProvider() : _authService = getIt<AuthService>() {
+    _authService.onUserChanged.listen((account) {
+      _isAuthenticated = account != null;
       notifyListeners();
     });
   }
 
-  Future<GoogleSignInAccount?> signIn() async {
-    if (_currentUser != null) {
-      return _currentUser;
+  bool get isAuthenticated => _isAuthenticated;
+  bool get isSigningIn => _isSigningIn;
+
+  Future<void> signIn() async {
+    _setIsSigningIn(true);
+    try {
+      await _authService.signIn();
+    } finally {
+      _setIsSigningIn(false);
     }
-    _isSigningIn = true;
-    notifyListeners();
-    _currentUser = await _signIn.signIn();
-    _isSigningIn = false;
-    notifyListeners();
-    return _currentUser;
   }
 
   Future<void> signOut() async {
-    await _signIn.signOut();
-    _currentUser = null;
+    _setIsSigningIn(true);
+    try {
+      await _authService.signOut();
+    } finally {
+      _setIsSigningIn(false);
+    }
+  }
+
+  void _setIsSigningIn(bool value) {
+    _isSigningIn = value;
     notifyListeners();
-  }
-
-  Future<void> silentSignIn() async {
-    _currentUser = await _signIn.signInSilently();
-  }
-
-  Future<bool> isSignedIn() async {
-    return await _signIn.isSignedIn();
   }
 }

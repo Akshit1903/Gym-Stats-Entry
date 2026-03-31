@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+
+import 'providers/auth_provider.dart';
 
 class SignInView extends StatefulWidget {
   const SignInView({super.key});
@@ -14,13 +15,6 @@ class _SignInViewState extends State<SignInView>
     vsync: this,
     duration: const Duration(milliseconds: 900),
   )..forward();
-  late AuthProvider _authProvider;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _authProvider = Provider.of<AuthProvider>(context);
-  }
 
   @override
   void dispose() {
@@ -30,6 +24,7 @@ class _SignInViewState extends State<SignInView>
 
   @override
   Widget build(BuildContext context) {
+    final AuthProvider authProvider = context.watch<AuthProvider>();
     final ColorScheme scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -40,10 +35,10 @@ class _SignInViewState extends State<SignInView>
             final bool isWide = constraints.maxWidth > 560;
             final Widget art = _HeroArt(controller: _controller);
             final Widget panel = _SignInPanel(
-              isBusy: _authProvider.isSigningIn,
+              isBusy: authProvider.isSigningIn,
               onPressed: () async {
                 try {
-                  await _authProvider.signIn();
+                  await authProvider.signIn();
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

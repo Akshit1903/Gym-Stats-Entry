@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
-import "../utils/constants.dart";
+
+import "../common/constants.dart";
 
 class SamsungHealth {
   static const MethodChannel _channel = MethodChannel(Constants.packageName);
