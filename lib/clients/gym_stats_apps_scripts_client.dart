@@ -6,7 +6,7 @@ class GymStatsAppsScriptsClient extends AppsScriptsClient {
   GymStatsAppsScriptsClient() : super(AppsScriptType.gymStats);
 
   Future<String> getNumberOfGymDays([BuildContext? context]) async {
-    final String? noOfGymDays = await callAppsScript(
+    final String? noOfGymDays = await callAppsScripts(
       "getNumberOfDaysIWentToGymInLast7Days",
       [],
       context,
@@ -17,7 +17,7 @@ class GymStatsAppsScriptsClient extends AppsScriptsClient {
   }
 
   Future<String> getWorkoutData([BuildContext? context]) async {
-    return await callAppsScript(
+    return await callAppsScripts(
           "getAllBodyCompositionEntries",
           [],
           context,
@@ -31,7 +31,7 @@ class GymStatsAppsScriptsClient extends AppsScriptsClient {
     Map<String, dynamic> workoutData, [
     BuildContext? context,
   ]) async {
-    await callAppsScript(
+    await callAppsScripts(
       "addWorkoutLog",
       [workoutData],
       context,
@@ -44,7 +44,7 @@ class GymStatsAppsScriptsClient extends AppsScriptsClient {
     Map<String, dynamic> cutData, [
     BuildContext? context,
   ]) async {
-    return await callAppsScript(
+    return await callAppsScripts(
       "addCutLog",
       [cutData],
       context,
@@ -54,7 +54,7 @@ class GymStatsAppsScriptsClient extends AppsScriptsClient {
   }
 
   Future<String> getNextWorkoutType([BuildContext? context]) async {
-    return await callAppsScript(
+    return await callAppsScripts(
           "getNextWorkoutType",
           [],
           context,

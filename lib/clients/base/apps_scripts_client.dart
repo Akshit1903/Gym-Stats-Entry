@@ -16,7 +16,7 @@ class AppsScriptsClient {
 
   AppsScriptsClient(this._appsScriptType) : _authService = getIt<AuthService>();
 
-  Future<String?> callAppsScript(
+  Future<String?> callAppsScripts(
     final String functionName,
     final List<dynamic> parameters,
     BuildContext? context,
