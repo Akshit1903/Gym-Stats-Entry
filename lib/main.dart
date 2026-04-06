@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 Future<void> initApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  await BackgroundService.initWorkManager();
+  await initWorkManager();
   setUpLocators();
 }
 

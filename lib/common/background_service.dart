@@ -25,20 +25,18 @@ callbackDispatcher() {
   });
 }
 
-class BackgroundService {
-  static Future<void> initWorkManager() async {
-    await Workmanager().initialize(callbackDispatcher);
-    await Workmanager().registerPeriodicTask(
-      "gymWidgetTask",
-      "updateGymDays",
-      frequency: const Duration(minutes: 15),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-    );
-    // ⚡ Immediate one-off debug task (runs after 10 seconds)
-    // await Workmanager().registerOneOffTask(
-    //   "debugGymWidgetTask",
-    //   "updateGymDays",
-    //   initialDelay: const Duration(seconds: 5),
-    // );
-  }
+Future<void> initWorkManager() async {
+  await Workmanager().initialize(callbackDispatcher);
+  await Workmanager().registerPeriodicTask(
+    "gymWidgetTask",
+    "updateGymDays",
+    frequency: const Duration(minutes: 15),
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+  );
+  // ⚡ Immediate one-off debug task (runs after 10 seconds)
+  // await Workmanager().registerOneOffTask(
+  //   "debugGymWidgetTask",
+  //   "updateGymDays",
+  //   initialDelay: const Duration(seconds: 5),
+  // );
 }
